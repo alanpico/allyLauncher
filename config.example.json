@@ -1,0 +1,9 @@
+{
+  "gamesFolder": "C:\\Users\\YOU\\AllyLauncher\\Games",
+  "steamGridDbApiKey": "YOUR_STEAMGRIDDB_API_KEY",
+  "launchOnStartup": false,
+  "theme": "default",
+  "favorites": [],
+  "recent": [],
+  "coverMap": {}
+}
