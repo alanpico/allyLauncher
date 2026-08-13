@@ -16,6 +16,8 @@
   --touch-min: 48px;
   --font: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   --scrollbar-thumb: #6b7380;
+  --fav-thread: #c45c4a;
+  --fav-thread-gold: #e0c070;
 }
 
 * {
@@ -37,6 +39,7 @@ body {
 }
 
 .app-shell {
+  position: relative;
   display: grid;
   grid-template-rows: var(--bar-height) 1fr;
   height: 100%;
@@ -48,10 +51,11 @@ body {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.9rem;
+  padding: 0.35rem 0.9rem;
   background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(10px);
+  z-index: 4;
 }
 
 .brand {
@@ -66,7 +70,7 @@ body {
   gap: 0.4rem;
   overflow-x: auto;
   scrollbar-width: none;
-  min-height: var(--touch-min);
+  min-height: 2.15rem;
   align-items: center;
 }
 
@@ -79,11 +83,11 @@ body {
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
-  min-height: var(--touch-min);
-  padding: 0 0.9rem;
+  min-height: 2.15rem;
+  padding: 0 0.75rem;
   border-radius: 999px;
   font: inherit;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -101,7 +105,25 @@ body {
 
 .top-actions {
   display: flex;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.icon-btn-tool {
+  min-height: 2rem;
+  min-width: 2rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.45rem;
+}
+
+.icon-btn-tool svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  display: block;
 }
 
 .icon-btn,
@@ -140,9 +162,9 @@ body {
   align-content: start;
   align-items: start;
   outline: none;
-  /* Room for selected card scale/tilt */
+  /* Room for selected card scale/tilt + on-screen control legend */
   padding-top: clamp(1.25rem, 3vw, 2rem);
-  padding-bottom: clamp(1.5rem, 3.5vw, 2.5rem);
+  padding-bottom: clamp(3.25rem, 8vh, 4.75rem);
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
@@ -180,6 +202,8 @@ body {
   border-radius: var(--tile-radius);
   min-width: 0;
   min-height: calc(var(--touch-min) * 2);
+  scroll-margin-top: 1.25rem;
+  scroll-margin-bottom: 2.75rem;
 }
 
 .game-tile:focus-visible {
@@ -280,6 +304,69 @@ body {
   pointer-events: none;
 }
 
+.controls-hint {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.55rem;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem 0.7rem;
+  max-width: min(100% - 1.5rem, 34rem);
+  pointer-events: none;
+  padding: 0.32rem 0.5rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
+.hint-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  white-space: nowrap;
+}
+
+.pad-btn,
+.pad-shoulder {
+  display: inline-grid;
+  place-items: center;
+  margin: 0;
+  border: none;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.62rem;
+  line-height: 1;
+  color: #041018;
+}
+
+.pad-btn {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+}
+
+.pad-a {
+  background: #3ddc84;
+}
+
+.pad-y {
+  background: #f5d76e;
+}
+
+.pad-shoulder {
+  min-width: 1.55rem;
+  height: 1.05rem;
+  padding: 0 0.28rem;
+  border-radius: 0.28rem;
+  background: color-mix(in srgb, var(--text) 82%, #8a93a3);
+}
+
 .empty-state {
   position: absolute;
   inset: var(--bar-height) 0 0 0;
@@ -365,9 +452,493 @@ body {
   line-height: 1.4;
 }
 
+/* Favorites carousel — gated; other categories keep the vertical grid. */
+.app-shell[data-category="favorites"] {
+  --title-size: clamp(0.95rem, 1.7vw, 1.28rem);
+}
+
+.app-shell[data-category="favorites"]::before {
+  content: "";
+  position: absolute;
+  inset: var(--bar-height) 0 0 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 72%, rgba(58, 30, 16, 0.55) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(20, 12, 8, 0.85) 0%, transparent 65%),
+    linear-gradient(180deg, transparent 0%, rgba(18, 14, 12, 0.35) 55%, rgba(12, 10, 9, 0.55) 100%);
+}
+
+.game-grid.fav-carousel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: none;
+  padding-top: clamp(1.2rem, 3.5vh, 2.4rem);
+  padding-bottom: clamp(3.4rem, 8vh, 5rem);
+  /* Enough inset that the first/last hero can sit dead-center. */
+  padding-left: calc(50% - min(27vw, 37vh) - 1.6rem);
+  padding-right: calc(50% - min(27vw, 37vh) - 1.6rem);
+  touch-action: pan-x;
+  perspective: 1400px;
+}
+
+.fav-carousel::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.fav-carousel .game-tile {
+  --fan-offset: 0;
+  --fan-abs: 0;
+  isolation: auto;
+  flex: 0 0 auto;
+  width: min(54vw, calc(74vh * 2 / 3));
+  height: auto;
+  aspect-ratio: 2 / 3;
+  max-height: calc(100% - 3.4rem);
+  min-height: 0;
+  z-index: 1;
+  opacity: 0.55;
+  filter: saturate(0.72) brightness(0.88);
+  transform: translateY(calc(var(--fan-abs) * 0.85rem))
+    rotate(calc(var(--fan-offset) * 5.5deg))
+    translateX(calc(var(--fan-offset) * -0.35rem));
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.35s ease,
+    filter 0.35s ease,
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  perspective: 1100px;
+  scroll-margin-inline: 12vw;
+}
+
+.fav-carousel .game-tile.fan-near {
+  opacity: 0.78;
+  filter: saturate(0.88) brightness(0.94);
+  z-index: 2;
+}
+
+.fav-carousel .game-tile.fan-far {
+  opacity: 0.42;
+  filter: saturate(0.6) brightness(0.8);
+}
+
+.fav-carousel .game-tile.focused {
+  z-index: 3;
+  opacity: 1;
+  filter: none;
+  transform: translateY(-0.35rem) rotate(0deg);
+}
+
+.card-stage {
+  --card-tilt: var(--tilt);
+  --card-lift: 0px;
+  --card-scale: 0.88;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--tile-radius);
+  transform: translateY(var(--card-lift)) scale(var(--card-scale)) rotate(var(--card-tilt));
+  transform-origin: 50% 58%;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.38s ease;
+  will-change: transform;
+}
+
+.fav-carousel .game-tile.focused .card-stage {
+  --card-tilt: var(--tilt-focus);
+  --card-lift: -0.15rem;
+  --card-scale: 1;
+  box-shadow:
+    var(--focus-ring),
+    0 22px 44px rgba(0, 0, 0, 0.55),
+    0 0 0 1px color-mix(in srgb, var(--fav-thread-gold) 35%, transparent);
+}
+
+.card-flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--tile-radius);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: flat;
+  overflow: hidden;
+}
+
+.card-front {
+  transform: rotateY(0deg) translateZ(1px);
+}
+
+.card-back {
+  transform: rotateY(180deg) translateZ(1px);
+}
+
+.fav-carousel .game-cover-wrap {
+  --card-tilt: 0deg;
+  --card-lift: 0px;
+  --card-scale: 1;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  transition: none;
+  will-change: auto;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.fav-carousel .game-tile.focused .game-cover-wrap {
+  --card-tilt: 0deg;
+  --card-lift: 0px;
+  --card-scale: 1;
+  box-shadow: none;
+}
+
+.tarot-back {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--tile-radius);
+  background:
+    url("./tarot-back.svg") center / cover no-repeat,
+    radial-gradient(120% 80% at 50% 40%, #3a1d4e 0%, #140c22 70%);
+  box-shadow: inset 0 0 0 1px rgba(212, 178, 74, 0.25);
+}
+
+.fate-span {
+  position: relative;
+  flex: 0 0 clamp(2.2rem, 6vw, 4.2rem);
+  height: 1.7rem;
+  align-self: center;
+  margin-inline: -1.1rem;
+  margin-bottom: clamp(4rem, 12vh, 7rem);
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.fate-span-lead,
+.fate-span-tail {
+  flex-basis: clamp(1.6rem, 4vw, 2.8rem);
+  margin-inline: 0;
+}
+
+.fate-string {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 18%,
+    #000 82%,
+    transparent 100%
+  );
+}
+
+.fate-span-lead .fate-string {
+  mask-image: linear-gradient(90deg, transparent 0%, #000 40%, #000 88%, transparent 100%);
+}
+
+.fate-span-tail .fate-string {
+  mask-image: linear-gradient(90deg, transparent 0%, #000 12%, #000 60%, transparent 100%);
+}
+
+.fate-cord {
+  fill: none;
+  stroke: var(--fav-thread);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.fate-cord-fine {
+  fill: none;
+  stroke: var(--fav-thread-gold);
+  stroke-width: 0.65;
+  stroke-linecap: round;
+  opacity: 0.7;
+}
+
+.fate-bead {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.58rem;
+  height: 0.58rem;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: radial-gradient(circle at 30% 28%, #f0e0a4, #a84a38 52%, #3a1810 100%);
+  border: 1px solid color-mix(in srgb, var(--fav-thread-gold) 70%, transparent);
+  box-shadow: 0 0 7px color-mix(in srgb, var(--fav-thread) 55%, transparent);
+}
+
+.empty-state.empty-favorites {
+  color: color-mix(in srgb, var(--text-muted) 80%, #e0c070);
+}
+
+.empty-state.empty-favorites .pad-y {
+  vertical-align: -0.12em;
+}
+
+/* —— Built-in layout: Ornate grid —— */
+[data-layout="ornate-grid"] .game-grid:not(.fav-carousel):not(.hero-deck) {
+  gap: clamp(0.95rem, 1.8vw, 1.45rem);
+  padding-top: clamp(1.4rem, 3.2vw, 2.2rem);
+}
+
+[data-layout="ornate-grid"] .game-cover-wrap {
+  border-radius: calc(var(--tile-radius) + 0.08rem);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #c9d2de 55%, var(--accent)),
+    0 0 0 3px color-mix(in srgb, var(--bg) 70%, #6a7382),
+    0 0 0 4px color-mix(in srgb, #b8c2d0 28%, transparent),
+    0 12px 28px rgba(0, 0, 0, 0.42);
+}
+
+[data-layout="ornate-grid"] .game-cover-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(210, 220, 232, 0.28);
+  border-radius: calc(var(--tile-radius) - 0.05rem);
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+[data-layout="ornate-grid"] .game-cover-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, transparent 28%),
+    linear-gradient(315deg, rgba(255, 255, 255, 0.06) 0%, transparent 24%);
+  mix-blend-mode: soft-light;
+}
+
+[data-layout="ornate-grid"] .game-tile.focused .game-cover-wrap {
+  --card-lift: -0.55rem;
+  --card-scale: 1.09;
+  box-shadow:
+    var(--focus-ring),
+    0 0 0 1px color-mix(in srgb, #e8eef8 70%, var(--accent)),
+    0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent),
+    0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* —— Built-in layout: Hero deck —— */
+.game-grid.hero-deck {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  grid-template-columns: 1fr;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  align-content: stretch;
+}
+
+.hero-deck .deck-wall {
+  position: absolute;
+  inset: 0 0 28% 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 0.45rem;
+  padding: clamp(0.75rem, 2vw, 1.4rem);
+  padding-bottom: 18%;
+  align-content: start;
+  opacity: 0.34;
+  filter: saturate(0.55) brightness(0.7);
+  pointer-events: none;
+  mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 45%,
+    transparent 92%
+  );
+  z-index: 0;
+}
+
+.hero-deck .deck-wall-card {
+  aspect-ratio: 2 / 3;
+  border-radius: calc(var(--tile-radius) - 0.1rem);
+  overflow: hidden;
+  transform: rotate(calc((var(--i, 0) - 3) * 0.4deg));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.hero-deck .deck-wall-card .game-cover-wrap {
+  --card-tilt: 0deg;
+  --card-lift: 0px;
+  --card-scale: 1;
+  transform: none;
+  box-shadow: none;
+  border-radius: inherit;
+}
+
+.hero-deck .deck-wall-card .game-title,
+.hero-deck .deck-wall-card .fav-badge {
+  display: none;
+}
+
+.hero-deck .deck-wall-card.is-focus {
+  opacity: 0.15;
+}
+
+.hero-deck .hero-stage {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: clamp(0.6rem, 2vh, 1.2rem) 1rem 0.35rem;
+  cursor: pointer;
+}
+
+.hero-deck .hero-card {
+  width: min(42vw, calc(58vh * 2 / 3), 320px);
+  aspect-ratio: 2 / 3;
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 22px 40px rgba(0, 0, 0, 0.55));
+}
+
+.hero-deck .hero-card .game-cover-wrap {
+  --card-tilt: 0deg;
+  --card-lift: 0px;
+  --card-scale: 1;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border-radius: calc(var(--tile-radius) + 0.1rem);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 55%, #dce6f4),
+    0 0 0 5px color-mix(in srgb, var(--bg) 55%, #5a6575),
+    0 0 0 6px color-mix(in srgb, #c5d0de 30%, transparent),
+    var(--focus-ring);
+}
+
+.hero-deck .hero-card .game-cover-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(220, 230, 242, 0.32);
+  border-radius: var(--tile-radius);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.hero-deck .hero-card .game-title {
+  font-size: clamp(0.95rem, 1.8vw, 1.25rem);
+  padding: 0.7rem 0.7rem 1.35rem;
+}
+
+.hero-deck .card-hand {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0.65rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem clamp(1rem, 4vw, 2.5rem) clamp(3.4rem, 8vh, 4.9rem);
+  padding-left: calc(50% - 3.1rem);
+  padding-right: calc(50% - 3.1rem);
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  touch-action: pan-x;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--bg) 55%, transparent) 28%,
+    color-mix(in srgb, var(--bg-elevated) 70%, transparent) 100%
+  );
+}
+
+.hero-deck .card-hand::-webkit-scrollbar {
+  height: 8px;
+}
+
+.hero-deck .card-hand .game-tile {
+  flex: 0 0 auto;
+  width: clamp(64px, 8.5vw, 100px);
+  min-height: 0;
+  opacity: 0.72;
+  filter: saturate(0.8);
+  transition:
+    opacity 0.3s ease,
+    filter 0.3s ease;
+}
+
+.hero-deck .card-hand .game-tile.focused {
+  opacity: 1;
+  filter: none;
+  z-index: 3;
+}
+
+.hero-deck .card-hand .game-cover-wrap {
+  --card-scale: 1;
+  --card-lift: 0px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
+}
+
+.hero-deck .card-hand .game-tile.focused .game-cover-wrap {
+  --card-lift: -0.35rem;
+  --card-scale: 1.12;
+  box-shadow:
+    var(--focus-ring),
+    0 14px 28px rgba(0, 0, 0, 0.5);
+}
+
+.hero-deck .card-hand .game-title {
+  font-size: 0.62rem;
+  padding: 0.35rem 0.35rem 0.7rem;
+  -webkit-line-clamp: 1;
+}
+
+.hero-deck .card-hand .fav-badge {
+  width: 1.15rem;
+  height: 1.15rem;
+  font-size: 0.65rem;
+  right: 0.25rem;
+  bottom: 0.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-flipper,
+  .card-stage,
+  .fav-carousel .game-tile,
+  .hero-deck .hero-card,
+  .hero-deck .card-hand .game-cover-wrap {
+    transition: none;
+  }
+}
+
 @media (max-width: 1100px) {
-  .game-grid {
+  .game-grid:not(.fav-carousel):not(.hero-deck) {
     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  .hero-deck .deck-wall {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   }
 }
 
@@ -390,7 +961,11 @@ body {
     grid-column: 1 / -1;
   }
 
-  .game-grid {
+  .game-grid:not(.fav-carousel):not(.hero-deck) {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+
+  .hero-deck .hero-card {
+    width: min(56vw, calc(48vh * 2 / 3), 260px);
   }
 }

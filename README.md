@@ -5,7 +5,7 @@ Lightweight game launcher for ROG Ally X (and any Windows display). Drop `.lnk` 
 ## Features
 
 - Watches `%USERPROFILE%\AllyLauncher\Games` (configurable)
-- Categories: **All**, **Favorites**, **Recent**, plus subfolders
+- Categories: **All**, **Favorites** (hero carousel), **Recent**, plus subfolders
 - Cover art from [SteamGridDB](https://www.steamgriddb.com/) with local disk cache
 - Touch, mouse, and gamepad navigation
 - Optional launch on Windows startup
@@ -55,9 +55,9 @@ Default: `C:\Users\<you>\AllyLauncher\Games`
 
 | Input | Action |
 | --- | --- |
-| Tap / click | Launch |
+| Tap / click | Launch (on Favorites, a side card selects first) |
 | Long-press / right-click / **Y** | Favorite |
-| D-pad / stick / arrows | Move |
+| D-pad / stick / arrows | Move (Favorites is left/right only) |
 | **A** / Enter | Launch |
 | **LB** / **RB** / `[` `]` | Change category |
 | **Start** | Settings |
@@ -65,10 +65,20 @@ Default: `C:\Users\<you>\AllyLauncher\Games`
 
 ## CSS theme hooks
 
+Built-in themes (Settings → Theme):
+
+- **Default** — classic portrait grid
+- **Ornate grid** — filigree card frames + stronger deck tilts
+- **Hero deck** — large chosen card, dense deck wall, hand strip
+
+Favorites always uses the tarot table-spread layout (arc, felt wash, fate threads), regardless of theme.
+
 Themes can override CSS variables and classes:
 
-- Variables: `--bg`, `--bg-glow`, `--bg-elevated`, `--text`, `--text-muted`, `--accent`, `--accent-soft`, `--tile-gap`, `--tile-radius`, `--title-size`, `--bar-height`, `--focus-ring`, `--touch-min`, `--font`, `--scrollbar-thumb`
-- Classes: `.app-shell`, `.top-bar`, `.brand`, `.category-bar`, `.category-tab`, `.game-grid`, `.game-tile`, `.game-cover`, `.game-title`, `.fav-badge`, `.settings-dialog`, `.icon-btn`, `.primary-btn`
+- Variables: `--bg`, `--bg-glow`, `--bg-elevated`, `--text`, `--text-muted`, `--accent`, `--accent-soft`, `--tile-gap`, `--tile-radius`, `--title-size`, `--bar-height`, `--focus-ring`, `--touch-min`, `--font`, `--scrollbar-thumb`, `--fav-thread`, `--fav-thread-gold`
+- Classes: `.app-shell`, `.top-bar`, `.brand`, `.category-bar`, `.category-tab`, `.game-grid`, `.game-tile`, `.game-cover`, `.game-title`, `.fav-badge`, `.settings-dialog`, `.icon-btn`, `.icon-btn-tool`, `.primary-btn`, `.controls-hint`
+- Layout hooks: `[data-layout="default"|"ornate-grid"|"hero-deck"]`, `.hero-deck`, `.hero-stage`, `.hero-card`, `.deck-wall`, `.card-hand`
+- Favorites-only: `[data-category="favorites"]` on `.app-shell` / `.game-grid`, `.fav-carousel`, `.card-stage`, `.card-flipper`, `.tarot-back`, `.fate-span`, `.fate-string`, `.fate-bead`, `.empty-favorites`
 
 Example theme: [`themes/example.css`](themes/example.css) — copy into the app themes folder (Settings → Open themes folder).
 

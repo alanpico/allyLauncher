@@ -13,8 +13,16 @@
         <div class="brand">Alan Games Launcher</div>
         <nav id="category-bar" class="category-bar" aria-label="Categories"></nav>
         <div class="top-actions">
-          <button type="button" id="btn-open-folder" class="icon-btn" title="Open games folder">Folder</button>
-          <button type="button" id="btn-settings" class="icon-btn" title="Settings">Settings</button>
+          <button type="button" id="btn-open-folder" class="icon-btn icon-btn-tool" title="Open games folder" aria-label="Open games folder">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+            </svg>
+          </button>
+          <button type="button" id="btn-settings" class="icon-btn icon-btn-tool" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.77 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.89 14.52a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.4.34.64.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.09.5 0 .64-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -23,6 +31,13 @@
       <p id="empty-state" class="empty-state hidden">
         Drop <code>.lnk</code> or <code>.url</code> shortcuts into your games folder.
       </p>
+
+      <aside class="controls-hint" aria-hidden="true">
+        <span class="hint-item"><kbd class="pad-btn pad-a">A</kbd> Play</span>
+        <span class="hint-item"><kbd class="pad-btn pad-y">Y</kbd> Favorite</span>
+        <span class="hint-item"><kbd class="pad-shoulder">LB</kbd><kbd class="pad-shoulder">RB</kbd> Categories</span>
+        <span class="hint-item"><kbd class="pad-shoulder">Start</kbd> Settings</span>
+      </aside>
     </div>
 
     <dialog id="settings-dialog" class="settings-dialog">
@@ -48,6 +63,11 @@
           <span>Theme</span>
           <select id="settings-theme"></select>
         </label>
+
+        <p class="hint">
+          Built-in layouts: Default, Ornate grid, Hero deck. Favorites always use the tarot table spread.
+          Custom CSS themes from the themes folder still appear here.
+        </p>
 
         <div class="settings-actions">
           <button type="button" id="btn-open-themes" class="icon-btn">Open themes folder</button>

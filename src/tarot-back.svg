@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" role="img" aria-label="Tarot card back">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1230"/>
+      <stop offset="42%" stop-color="#2c1542"/>
+      <stop offset="100%" stop-color="#140c22"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="50%" cy="48%" r="68%">
+      <stop offset="0%" stop-color="#3a1d4e" stop-opacity="0.35"/>
+      <stop offset="70%" stop-color="#120818" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#08040e" stop-opacity="0.72"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0e0a4"/>
+      <stop offset="45%" stop-color="#d4b24a"/>
+      <stop offset="100%" stop-color="#8a6a1c"/>
+    </linearGradient>
+    <linearGradient id="gold-soft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ead889"/>
+      <stop offset="100%" stop-color="#a8842a"/>
+    </linearGradient>
+    <radialGradient id="moon-fill" cx="42%" cy="38%" r="60%">
+      <stop offset="0%" stop-color="#f3e7c4"/>
+      <stop offset="55%" stop-color="#d8c07a"/>
+      <stop offset="100%" stop-color="#8d6f28"/>
+    </radialGradient>
+    <pattern id="stars" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="6" r="0.65" fill="#e8d5a3" opacity="0.38"/>
+      <circle cx="15" cy="14" r="0.45" fill="#e8d5a3" opacity="0.28"/>
+      <path d="M11 2.2l.35 1.05h1.1l-.9.66.34 1.06L11 4.3l-.89.67.34-1.06-.9-.66h1.1z" fill="#dcc88a" opacity="0.22"/>
+    </pattern>
+  </defs>
+
+  <rect width="200" height="300" rx="10" fill="url(#field)"/>
+  <rect width="200" height="300" rx="10" fill="url(#stars)"/>
+  <rect width="200" height="300" rx="10" fill="url(#vignette)"/>
+
+  <!-- Outer frames -->
+  <rect x="7" y="7" width="186" height="286" rx="7" fill="none" stroke="url(#gold)" stroke-width="2.4"/>
+  <rect x="13" y="13" width="174" height="274" rx="5" fill="none" stroke="#d4b24a" stroke-width="0.55" opacity="0.75"/>
+  <rect x="22" y="28" width="156" height="244" rx="3" fill="none" stroke="url(#gold-soft)" stroke-width="1.05"/>
+  <rect x="28" y="34" width="144" height="232" rx="2" fill="none" stroke="#c9a227" stroke-width="0.4" opacity="0.55"/>
+
+  <!-- Corner moons -->
+  <g fill="none" stroke="url(#gold)" stroke-width="1.15">
+    <path d="M28 48c8-10 22-10 28 0-8-4-16-4-28 0z"/>
+    <path d="M172 48c-8-10-22-10-28 0 8-4 16-4 28 0z"/>
+    <path d="M28 252c8 10 22 10 28 0-8 4-16 4-28 0z"/>
+    <path d="M172 252c-8 10-22 10-28 0 8 4 16 4 28 0z"/>
+  </g>
+  <g fill="url(#gold)" opacity="0.85">
+    <circle cx="36" cy="42" r="1.4"/>
+    <circle cx="164" cy="42" r="1.4"/>
+    <circle cx="36" cy="258" r="1.4"/>
+    <circle cx="164" cy="258" r="1.4"/>
+  </g>
+
+  <!-- Diamond lattice (subtle, occult) -->
+  <g fill="none" stroke="#d4b24a" stroke-width="0.35" opacity="0.28">
+    <path d="M100 58 L148 150 L100 242 L52 150 Z"/>
+    <path d="M100 78 L132 150 L100 222 L68 150 Z"/>
+  </g>
+
+  <!-- Central medallion -->
+  <circle cx="100" cy="150" r="46" fill="#1a1028" stroke="url(#gold)" stroke-width="1.6"/>
+  <circle cx="100" cy="150" r="40" fill="none" stroke="#ead889" stroke-width="0.4" opacity="0.55"/>
+  <circle cx="100" cy="150" r="34" fill="#24122f" stroke="url(#gold-soft)" stroke-width="0.7"/>
+
+  <!-- Sun rays -->
+  <g stroke="url(#gold)" stroke-width="0.9" stroke-linecap="round" opacity="0.9">
+    <path d="M100 112 v-9"/>
+    <path d="M100 188 v9"/>
+    <path d="M62 150 h-9"/>
+    <path d="M138 150 h9"/>
+    <path d="M74 124 l-6-6"/>
+    <path d="M126 176 l6 6"/>
+    <path d="M126 124 l6-6"/>
+    <path d="M74 176 l-6 6"/>
+  </g>
+
+  <!-- Crescent + sun -->
+  <circle cx="100" cy="150" r="16" fill="url(#moon-fill)"/>
+  <circle cx="107" cy="146" r="12" fill="#24122f"/>
+  <circle cx="96" cy="148" r="2.1" fill="#2a1540"/>
+
+  <!-- Tiny sigil under medallion -->
+  <g fill="none" stroke="url(#gold)" stroke-width="0.85" opacity="0.8">
+    <path d="M100 206 v18"/>
+    <path d="M92 215 h16"/>
+    <circle cx="100" cy="224" r="3.2"/>
+  </g>
+  <g fill="none" stroke="url(#gold)" stroke-width="0.85" opacity="0.8">
+    <path d="M100 76 v-18"/>
+    <path d="M92 85 h16"/>
+    <circle cx="100" cy="76" r="3.2"/>
+  </g>
+</svg>

@@ -34,7 +34,25 @@ type SettingsView = {
 
 type CategoryId = "all" | "favorites" | "recent" | `folder:${string}`;
 
+const EMPTY_LIBRARY_COPY =
+  'Drop <code>.lnk</code> or <code>.url</code> shortcuts into your games folder.';
+const EMPTY_FAVORITES_COPY =
+  'No favorites yet — press <kbd class="pad-btn pad-y">Y</kbd> on a game.';
+
+const FATE_PATHS = [
+  "M0 12 C 22 3, 38 21, 60 12 S 98 5, 120 12",
+  "M0 12 C 18 19, 44 4, 60 12 S 96 20, 120 12",
+  "M0 12 C 24 6, 36 18, 60 11 S 100 8, 120 12",
+];
+
+const THEME_LABELS: Record<string, string> = {
+  default: "Default",
+  "ornate-grid": "Ornate grid",
+  "hero-deck": "Hero deck",
+};
+
 const gridEl = () => document.querySelector<HTMLElement>("#game-grid")!;
+const shellEl = () => document.querySelector<HTMLElement>("#app")!;
 const categoryBarEl = () => document.querySelector<HTMLElement>("#category-bar")!;
 const emptyEl = () => document.querySelector<HTMLElement>("#empty-state")!;
 const settingsDialog = () => document.querySelector<HTMLDialogElement>("#settings-dialog")!;
@@ -44,10 +62,37 @@ document.head.appendChild(themeStyleEl);
 
 let snapshot: LibrarySnapshot | null = null;
 let activeCategory: CategoryId = "all";
+let pickedInitialCategory = false;
 let focusIndex = 0;
 let visibleGames: GameEntry[] = [];
+let carouselSuppressClick = false;
+let carouselDragging = false;
+let activeLayout: "default" | "ornate-grid" | "hero-deck" = "default";
 
 const buttonPrev: Record<number, boolean[]> = {};
+
+function isFavView(): boolean {
+  return activeCategory === "favorites";
+}
+
+function isHeroDeckLayout(): boolean {
+  return activeLayout === "hero-deck" && !isFavView();
+}
+
+function isHorizontalBrowse(): boolean {
+  return isFavView() || isHeroDeckLayout();
+}
+
+function browseScrollEl(): HTMLElement {
+  if (isHeroDeckLayout()) {
+    return gridEl().querySelector<HTMLElement>(".card-hand") ?? gridEl();
+  }
+  return gridEl();
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 function filteredGames(): GameEntry[] {
   if (!snapshot) return [];
@@ -128,6 +173,12 @@ function resetAmbient() {
 
 function applyAmbient(palette: AmbientPalette) {
   const root = document.documentElement;
+  if (isFavView()) {
+    root.style.setProperty("--bg", `color-mix(in srgb, ${palette.bg} 70%, #3a1e10)`);
+    root.style.setProperty("--bg-glow", `color-mix(in srgb, ${palette.glow} 52%, #6a3a12)`);
+    root.style.setProperty("--scrollbar-thumb", `color-mix(in srgb, ${palette.thumb} 68%, #c4a06a)`);
+    return;
+  }
   root.style.setProperty("--bg", palette.bg);
   root.style.setProperty("--bg-glow", palette.glow);
   root.style.setProperty("--scrollbar-thumb", palette.thumb);
@@ -247,6 +298,24 @@ async function coverUrl(path: string | null): Promise<string | null> {
   }
 }
 
+function clearTarotFlip(tile: HTMLElement | null) {
+  const flipper = tile?.querySelector<HTMLElement>(".card-flipper");
+  if (!flipper) return;
+  flipper.style.transition = "none";
+  flipper.style.transform = "rotateY(0deg)";
+}
+
+function playTarotFlip(tile: HTMLElement | null) {
+  if (!tile || prefersReducedMotion()) return;
+  const flipper = tile.querySelector<HTMLElement>(".card-flipper");
+  if (!flipper) return;
+  flipper.style.transition = "none";
+  flipper.style.transform = "rotateY(0deg)";
+  void flipper.offsetWidth;
+  flipper.style.transition = "transform 0.52s cubic-bezier(0.4, 0.02, 0.2, 1)";
+  flipper.style.transform = "rotateY(360deg)";
+}
+
 function setFocusedTile(next: number) {
   if (!visibleGames.length) {
     ambientGen += 1;
@@ -255,15 +324,77 @@ function setFocusedTile(next: number) {
   }
   const grid = gridEl();
   const clamped = Math.max(0, Math.min(next, visibleGames.length - 1));
-  if (clamped !== focusIndex) {
-    grid.querySelector<HTMLElement>(".game-tile.focused")?.classList.remove("focused");
+  const moved = clamped !== focusIndex;
+  if (moved) {
+    const prev = grid.querySelector<HTMLElement>(".game-tile.focused");
+    prev?.classList.remove("focused");
+    if (isFavView()) clearTarotFlip(prev);
     focusIndex = clamped;
   }
   const tile = grid.querySelector<HTMLElement>(`.game-tile[data-index="${focusIndex}"]`);
   tile?.classList.add("focused");
-  tile?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  if (isFavView()) updateFavoriteFan();
+  if (isHeroDeckLayout()) syncHeroStage();
+  revealFocusedTile(tile);
+  if (moved && isFavView()) playTarotFlip(tile);
   ambientGen += 1;
   void syncAmbient(visibleGames[focusIndex], ambientGen);
+}
+
+/** Keep the focused card fully in view, including scale/tilt overflow at the first row. */
+function revealFocusedTile(tile: HTMLElement | null) {
+  if (!tile) return;
+  if (isHorizontalBrowse()) {
+    const scroller = browseScrollEl();
+    const tileCenter = tile.offsetLeft + tile.offsetWidth / 2;
+    const target = tileCenter - scroller.clientWidth / 2;
+    scroller.scrollTo({ left: Math.max(0, target), behavior: "auto" });
+    return;
+  }
+  const grid = gridEl();
+  const cols = columnsEstimate();
+  if (focusIndex < cols) {
+    grid.scrollTop = 0;
+    return;
+  }
+  tile.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+/** Arc / table-spread offsets for the Favorites carousel. */
+function updateFavoriteFan() {
+  const grid = gridEl();
+  grid.querySelectorAll<HTMLElement>(".game-tile").forEach((tile) => {
+    const index = Number(tile.dataset.index ?? 0);
+    const dist = index - focusIndex;
+    const abs = Math.abs(dist);
+    tile.style.setProperty("--fan-offset", String(dist));
+    tile.style.setProperty("--fan-abs", String(abs));
+    tile.classList.toggle("fan-near", abs === 1);
+    tile.classList.toggle("fan-far", abs >= 2);
+  });
+}
+
+function syncHeroStage() {
+  const stage = gridEl().querySelector<HTMLElement>(".hero-stage");
+  if (!stage) return;
+  const game = visibleGames[focusIndex];
+  stage.innerHTML = "";
+  if (!game) return;
+
+  const card = document.createElement("div");
+  card.className = "hero-card";
+  const tilt = cardTilt(game.path);
+  card.style.setProperty("--tilt", `${tilt.focus.toFixed(2)}deg`);
+
+  const coverWrap = document.createElement("div");
+  coverWrap.className = "game-cover-wrap";
+  fillCover(coverWrap, game);
+  card.appendChild(coverWrap);
+  stage.appendChild(card);
+
+  gridEl().querySelectorAll<HTMLElement>(".deck-wall-card").forEach((el) => {
+    el.classList.toggle("is-focus", el.dataset.path === game.path);
+  });
 }
 
 function renderCategories() {
@@ -292,16 +423,211 @@ function renderCategories() {
   }
 }
 
+function syncFavoritesMode() {
+  const shell = shellEl();
+  const grid = gridEl();
+  shell.dataset.layout = activeLayout;
+  document.documentElement.dataset.layout = activeLayout;
+
+  if (isFavView()) {
+    shell.dataset.category = "favorites";
+    grid.dataset.category = "favorites";
+    grid.classList.add("fav-carousel");
+    grid.classList.remove("hero-deck");
+  } else {
+    delete shell.dataset.category;
+    delete grid.dataset.category;
+    grid.classList.remove("fav-carousel");
+    grid.classList.toggle("hero-deck", activeLayout === "hero-deck");
+    grid.scrollLeft = 0;
+  }
+}
+
+function updateEmptyState(hasVisible: boolean) {
+  const empty = emptyEl();
+  empty.classList.toggle("hidden", hasVisible);
+  empty.classList.toggle("empty-favorites", !hasVisible && isFavView());
+  if (hasVisible) return;
+  const libraryEmpty = !snapshot || snapshot.games.length === 0;
+  if (isFavView() && !libraryEmpty) {
+    empty.innerHTML = EMPTY_FAVORITES_COPY;
+  } else {
+    empty.innerHTML = EMPTY_LIBRARY_COPY;
+  }
+}
+
+function makeFateSpan(kind: "lead" | "gap" | "tail", variant: number): HTMLElement {
+  const span = document.createElement("div");
+  span.className = `fate-span fate-span-${kind}`;
+  span.setAttribute("aria-hidden", "true");
+  const d = FATE_PATHS[variant % FATE_PATHS.length];
+  span.innerHTML = `
+    <svg class="fate-string" viewBox="0 0 120 24" preserveAspectRatio="none">
+      <path class="fate-cord" d="${d}" />
+      <path class="fate-cord-fine" d="${d}" />
+    </svg>
+    ${kind === "gap" ? '<span class="fate-bead"></span>' : ""}
+  `;
+  return span;
+}
+
+function makeTarotBack(): HTMLElement {
+  const back = document.createElement("div");
+  back.className = "tarot-back";
+  back.setAttribute("aria-hidden", "true");
+  return back;
+}
+
+function fillCover(coverWrap: HTMLElement, game: GameEntry) {
+  const coverHost = document.createElement("div");
+  coverHost.className = "game-cover placeholder";
+  coverHost.textContent = "No art";
+  coverWrap.appendChild(coverHost);
+
+  if (game.coverPath) {
+    void coverUrl(game.coverPath).then((url) => {
+      if (!url) return;
+      if (!coverHost.isConnected) return;
+      const img = document.createElement("img");
+      img.className = "game-cover";
+      img.src = url;
+      img.alt = "";
+      img.loading = "lazy";
+      img.onerror = () => {
+        if (coverHost.isConnected) coverHost.textContent = "No art";
+      };
+      coverHost.replaceWith(img);
+    });
+  }
+
+  const title = document.createElement("div");
+  title.className = "game-title";
+  title.textContent = game.title;
+  coverWrap.appendChild(title);
+
+  if (game.favorite) {
+    const badge = document.createElement("div");
+    badge.className = "fav-badge";
+    badge.textContent = "★";
+    coverWrap.appendChild(badge);
+  }
+}
+
+function bindTileActions(tile: HTMLElement, game: GameEntry, index: number) {
+  tile.addEventListener("click", () => {
+    if (carouselSuppressClick) return;
+    if (isHorizontalBrowse() && index !== focusIndex) {
+      setFocusedTile(index);
+      return;
+    }
+    setFocusedTile(index);
+    void launch(game.path);
+  });
+
+  let pressTimer: number | undefined;
+  tile.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch" || e.pointerType === "pen") {
+      pressTimer = window.setTimeout(() => {
+        void favorite(game.path);
+      }, 550);
+    }
+  });
+  const clear = () => {
+    if (pressTimer) window.clearTimeout(pressTimer);
+  };
+  tile.addEventListener("pointerup", clear);
+  tile.addEventListener("pointerleave", clear);
+  tile.addEventListener("pointercancel", clear);
+
+  tile.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    void favorite(game.path);
+  });
+}
+
+function createGameTile(game: GameEntry, index: number): HTMLElement {
+  const tile = document.createElement("button");
+  tile.type = "button";
+  tile.className = `game-tile${index === focusIndex ? " focused" : ""}`;
+  tile.dataset.path = game.path;
+  tile.dataset.index = String(index);
+
+  const tilt = cardTilt(game.path);
+  tile.style.setProperty("--tilt", `${tilt.idle.toFixed(2)}deg`);
+  tile.style.setProperty("--tilt-focus", `${tilt.focus.toFixed(2)}deg`);
+
+  const coverWrap = document.createElement("div");
+  coverWrap.className = "game-cover-wrap";
+  fillCover(coverWrap, game);
+  tile.appendChild(coverWrap);
+  bindTileActions(tile, game, index);
+  return tile;
+}
+
+function createDeckWallCard(game: GameEntry): HTMLElement {
+  const card = document.createElement("div");
+  card.className = "deck-wall-card";
+  card.dataset.path = game.path;
+  const coverWrap = document.createElement("div");
+  coverWrap.className = "game-cover-wrap";
+  fillCover(coverWrap, game);
+  card.appendChild(coverWrap);
+  return card;
+}
+
+function renderHeroDeck(grid: HTMLElement) {
+  const deckWall = document.createElement("div");
+  deckWall.className = "deck-wall";
+  deckWall.setAttribute("aria-hidden", "true");
+  for (const game of visibleGames) {
+    deckWall.appendChild(createDeckWallCard(game));
+  }
+
+  const heroStage = document.createElement("div");
+  heroStage.className = "hero-stage";
+  heroStage.addEventListener("click", () => {
+    if (carouselSuppressClick) return;
+    const game = visibleGames[focusIndex];
+    if (game) void launch(game.path);
+  });
+
+  const cardHand = document.createElement("div");
+  cardHand.className = "card-hand";
+  visibleGames.forEach((game, index) => {
+    cardHand.appendChild(createGameTile(game, index));
+  });
+
+  grid.appendChild(deckWall);
+  grid.appendChild(heroStage);
+  grid.appendChild(cardHand);
+  syncHeroStage();
+  ensureFocusVisible();
+  requestAnimationFrame(() => {
+    const tile = grid.querySelector<HTMLElement>(`.game-tile[data-index="${focusIndex}"]`);
+    revealFocusedTile(tile);
+  });
+}
+
 function renderGrid() {
   const grid = gridEl();
   visibleGames = filteredGames();
   grid.innerHTML = "";
 
-  emptyEl().classList.toggle("hidden", visibleGames.length > 0);
+  updateEmptyState(visibleGames.length > 0);
   if (!visibleGames.length) {
     ambientGen += 1;
     resetAmbient();
     return;
+  }
+
+  if (isHeroDeckLayout()) {
+    renderHeroDeck(grid);
+    return;
+  }
+
+  const favorites = isFavView();
+  if (favorites) {
+    grid.appendChild(makeFateSpan("lead", 0));
   }
 
   visibleGames.forEach((game, index) => {
@@ -317,75 +643,51 @@ function renderGrid() {
 
     const coverWrap = document.createElement("div");
     coverWrap.className = "game-cover-wrap";
+    fillCover(coverWrap, game);
 
-    const coverHost = document.createElement("div");
-    coverHost.className = "game-cover placeholder";
-    coverHost.textContent = "No art";
-    coverWrap.appendChild(coverHost);
-
-    if (game.coverPath) {
-      void coverUrl(game.coverPath).then((url) => {
-        if (!url) return;
-        // Skip if this tile was re-rendered away
-        if (!coverHost.isConnected) return;
-        const img = document.createElement("img");
-        img.className = "game-cover";
-        img.src = url;
-        img.alt = "";
-        img.loading = "lazy";
-        img.onerror = () => {
-          if (coverHost.isConnected) coverHost.textContent = "No art";
-        };
-        coverHost.replaceWith(img);
-      });
+    if (favorites) {
+      const stage = document.createElement("div");
+      stage.className = "card-stage";
+      const flipper = document.createElement("div");
+      flipper.className = "card-flipper";
+      const front = document.createElement("div");
+      front.className = "card-face card-front";
+      front.appendChild(coverWrap);
+      const back = document.createElement("div");
+      back.className = "card-face card-back";
+      back.appendChild(makeTarotBack());
+      flipper.appendChild(front);
+      flipper.appendChild(back);
+      stage.appendChild(flipper);
+      tile.appendChild(stage);
+    } else {
+      tile.appendChild(coverWrap);
     }
 
-    const title = document.createElement("div");
-    title.className = "game-title";
-    title.textContent = game.title;
-    coverWrap.appendChild(title);
-
-    if (game.favorite) {
-      const badge = document.createElement("div");
-      badge.className = "fav-badge";
-      badge.textContent = "★";
-      coverWrap.appendChild(badge);
-    }
-
-    tile.appendChild(coverWrap);
-
-    tile.addEventListener("click", () => {
-      setFocusedTile(index);
-      void launch(game.path);
-    });
-
-    let pressTimer: number | undefined;
-    tile.addEventListener("pointerdown", (e) => {
-      if (e.pointerType === "touch" || e.pointerType === "pen") {
-        pressTimer = window.setTimeout(() => {
-          void favorite(game.path);
-        }, 550);
-      }
-    });
-    const clear = () => {
-      if (pressTimer) window.clearTimeout(pressTimer);
-    };
-    tile.addEventListener("pointerup", clear);
-    tile.addEventListener("pointerleave", clear);
-    tile.addEventListener("pointercancel", clear);
-
-    tile.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-      void favorite(game.path);
-    });
-
+    bindTileActions(tile, game, index);
     grid.appendChild(tile);
+
+    if (favorites && index < visibleGames.length - 1) {
+      grid.appendChild(makeFateSpan("gap", index + 1));
+    }
   });
 
+  if (favorites) {
+    grid.appendChild(makeFateSpan("tail", visibleGames.length + 1));
+    updateFavoriteFan();
+  }
+
   ensureFocusVisible();
+  if (favorites) {
+    requestAnimationFrame(() => {
+      const tile = grid.querySelector<HTMLElement>(`.game-tile[data-index="${focusIndex}"]`);
+      revealFocusedTile(tile);
+    });
+  }
 }
 
 function render() {
+  syncFavoritesMode();
   renderCategories();
   renderGrid();
 }
@@ -396,6 +698,7 @@ function ensureFocusVisible() {
 }
 
 function columnsEstimate(): number {
+  if (isHorizontalBrowse()) return 1;
   const grid = gridEl();
   const tile = grid.querySelector(".game-tile");
   if (!tile) return 4;
@@ -414,14 +717,40 @@ async function favorite(path: string) {
   render();
 }
 
+function resolveLayout(themeName: string): "default" | "ornate-grid" | "hero-deck" {
+  if (themeName === "ornate-grid" || themeName === "hero-deck") return themeName;
+  return "default";
+}
+
 async function applyTheme(name: string) {
-  const css = await invoke<string>("get_theme_css", { name });
-  themeStyleEl.textContent = css;
+  activeLayout = resolveLayout(name);
+  shellEl().dataset.layout = activeLayout;
+  document.documentElement.dataset.layout = activeLayout;
+  try {
+    const css = await invoke<string>("get_theme_css", { name });
+    themeStyleEl.textContent = css;
+  } catch {
+    themeStyleEl.textContent = "";
+  }
+}
+
+function themeLabel(name: string): string {
+  return THEME_LABELS[name] ?? name;
+}
+
+function pickInitialCategory(lib: LibrarySnapshot) {
+  if (pickedInitialCategory) return;
+  pickedInitialCategory = true;
+  const byPath = new Set(lib.games.map((g) => g.path));
+  if (lib.favorites.some((p) => byPath.has(p))) {
+    activeCategory = "favorites";
+  }
 }
 
 async function loadLibrary() {
   snapshot = await invoke<LibrarySnapshot>("get_library");
   await applyTheme(snapshot.theme);
+  pickInitialCategory(snapshot);
   render();
   void invoke("fetch_missing_covers").catch(() => undefined);
 }
@@ -444,7 +773,7 @@ async function openSettings() {
   for (const theme of settings.themes) {
     const opt = document.createElement("option");
     opt.value = theme;
-    opt.textContent = theme;
+    opt.textContent = themeLabel(theme);
     if (theme === settings.theme) opt.selected = true;
     themeSelect.appendChild(opt);
   }
@@ -483,11 +812,118 @@ function shiftCategory(delta: number) {
   render();
 }
 
+function nearestBrowseIndex(): number {
+  const scroller = browseScrollEl();
+  const mid = scroller.scrollLeft + scroller.clientWidth / 2;
+  let best = 0;
+  let bestDist = Infinity;
+  scroller.querySelectorAll<HTMLElement>(".game-tile").forEach((tile) => {
+    const index = Number(tile.dataset.index ?? 0);
+    const center = tile.offsetLeft + tile.offsetWidth / 2;
+    const dist = Math.abs(center - mid);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = index;
+    }
+  });
+  return best;
+}
+
 function moveFocus(dx: number, dy: number) {
   if (!visibleGames.length) return;
+  if (isHorizontalBrowse()) {
+    if (dx === 0) return;
+    setFocusedTile(focusIndex + dx);
+    return;
+  }
   const cols = columnsEstimate();
   const next = focusIndex + dx + dy * cols;
   setFocusedTile(next);
+}
+
+function bindFavoritesChrome() {
+  const grid = gridEl();
+  let drag: { pointerId: number; startX: number; startLeft: number; moved: boolean } | null =
+    null;
+
+  const scrollerForEvent = () => browseScrollEl();
+
+  grid.addEventListener("pointerdown", (e) => {
+    if (!isHorizontalBrowse() || e.button !== 0) return;
+    const scroller = scrollerForEvent();
+    drag = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startLeft: scroller.scrollLeft,
+      moved: false,
+    };
+    carouselDragging = false;
+    carouselSuppressClick = false;
+    grid.setPointerCapture(e.pointerId);
+  });
+
+  grid.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const scroller = scrollerForEvent();
+    const dx = e.clientX - drag.startX;
+    if (Math.abs(dx) > 8) {
+      drag.moved = true;
+      carouselDragging = true;
+      carouselSuppressClick = true;
+    }
+    if (drag.moved) {
+      scroller.scrollLeft = drag.startLeft - dx;
+    }
+  });
+
+  const endDrag = (e: PointerEvent) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const moved = drag.moved;
+    drag = null;
+    carouselDragging = false;
+    if (moved && isHorizontalBrowse()) {
+      setFocusedTile(nearestBrowseIndex());
+      window.setTimeout(() => {
+        carouselSuppressClick = false;
+      }, 50);
+    } else {
+      carouselSuppressClick = false;
+    }
+  };
+  grid.addEventListener("pointerup", endDrag);
+  grid.addEventListener("pointercancel", endDrag);
+
+  grid.addEventListener(
+    "wheel",
+    (e) => {
+      if (!isHorizontalBrowse()) return;
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      e.preventDefault();
+      scrollerForEvent().scrollLeft += e.deltaY;
+    },
+    { passive: false },
+  );
+
+  let scrollSnapTimer = 0;
+  const snapCarousel = () => {
+    if (!isHorizontalBrowse() || carouselDragging || !visibleGames.length) return;
+    const nearest = nearestBrowseIndex();
+    if (nearest !== focusIndex) setFocusedTile(nearest);
+  };
+  const onScroll = () => {
+    if (!isHorizontalBrowse() || carouselDragging) return;
+    window.clearTimeout(scrollSnapTimer);
+    scrollSnapTimer = window.setTimeout(snapCarousel, 140);
+  };
+  grid.addEventListener("scroll", onScroll, true);
+  grid.addEventListener("scrollend", snapCarousel, true);
+
+  window.addEventListener("resize", () => {
+    if (!isHorizontalBrowse() || !visibleGames.length) return;
+    const tile = grid.querySelector<HTMLElement>(`.game-tile[data-index="${focusIndex}"]`);
+    if (isHeroDeckLayout()) syncHeroStage();
+    revealFocusedTile(tile);
+  });
 }
 
 function pollGamepad() {
@@ -598,6 +1034,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   await listen<LibrarySnapshot>("library-updated", (event) => {
     snapshot = event.payload;
+    pickInitialCategory(snapshot);
     render();
   });
 
@@ -606,6 +1043,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   await loadLibrary();
+  bindFavoritesChrome();
   requestAnimationFrame(pollGamepad);
   gridEl().focus();
 });

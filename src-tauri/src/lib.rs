@@ -50,8 +50,10 @@ pub struct SettingsView {
     pub steam_grid_db_api_key_set: bool,
 }
 
+const BUILTIN_THEMES: &[&str] = &["default", "ornate-grid", "hero-deck"];
+
 fn list_theme_names() -> Vec<String> {
-    let mut names = vec!["default".to_string()];
+    let mut names: Vec<String> = BUILTIN_THEMES.iter().map(|s| (*s).to_string()).collect();
     if let Ok(entries) = std::fs::read_dir(themes_dir()) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -65,6 +67,10 @@ fn list_theme_names() -> Vec<String> {
     names.sort();
     names.dedup();
     names
+}
+
+fn is_builtin_theme(name: &str) -> bool {
+    BUILTIN_THEMES.iter().any(|t| *t == name)
 }
 
 fn snapshot_from(config: &AppConfig, games: &[GameEntry]) -> LibrarySnapshot {
@@ -212,14 +218,19 @@ fn fetch_missing_covers(app: AppHandle, state: State<'_, AppState>) -> Result<Li
 
 #[tauri::command]
 fn get_theme_css(name: String) -> Result<String, String> {
-    if name == "default" || name.trim().is_empty() {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
         return Ok(String::new());
     }
-    let path = themes_dir().join(format!("{}.css", name));
-    if !path.exists() {
-        return Err(format!("Theme not found: {}", name));
+    let path = themes_dir().join(format!("{}.css", trimmed));
+    if path.exists() {
+        return std::fs::read_to_string(path).map_err(|e| e.to_string());
     }
-    std::fs::read_to_string(path).map_err(|e| e.to_string())
+    // Built-in layout themes ship their styles in the app CSS via data-layout.
+    if is_builtin_theme(trimmed) {
+        return Ok(String::new());
+    }
+    Err(format!("Theme not found: {}", trimmed))
 }
 
 #[tauri::command]

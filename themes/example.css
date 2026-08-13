@@ -7,10 +7,14 @@
   Then pick "example" in Settings → Theme.
 
   Stable hooks (keep class names):
-    :root CSS variables (--bg, --bg-glow, --scrollbar-thumb, …)
+    :root CSS variables (--bg, --bg-glow, --scrollbar-thumb, --fav-thread, …)
     .app-shell, .top-bar, .brand, .category-bar, .category-tab
     .game-grid, .game-tile, .game-cover, .game-title, .fav-badge
-    .settings-dialog, .settings-form, .icon-btn, .primary-btn
+    .settings-dialog, .settings-form, .icon-btn, .icon-btn-tool, .primary-btn,
+    .controls-hint
+    Layout: [data-layout], .hero-deck, .hero-stage, .deck-wall, .card-hand
+    Favorites-only: [data-category="favorites"], .fav-carousel, .tarot-back,
+    .fate-string, .fate-span, .fate-bead, .card-flipper, .empty-favorites
 */
 
 :root {
@@ -24,4 +28,6 @@
   --accent-soft: rgba(123, 196, 127, 0.22);
   --tile-gap: 1rem;
   --tile-radius: 0.35rem;
+  --fav-thread: #8fbf7a;
+  --fav-thread-gold: #d7e0a8;
 }
