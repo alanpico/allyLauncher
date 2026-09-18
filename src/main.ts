@@ -1048,6 +1048,9 @@ function pollGamepad() {
 
 window.addEventListener("DOMContentLoaded", async () => {
   document.querySelector("#btn-settings")?.addEventListener("click", () => void openSettings());
+  document.querySelector("#btn-close")?.addEventListener("click", () => {
+    void invoke("hide_window");
+  });
   document.querySelector("#btn-open-folder")?.addEventListener("click", () => {
     void invoke("open_games_folder");
   });
