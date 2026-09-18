@@ -478,6 +478,79 @@ function makeTarotBack(): HTMLElement {
   return back;
 }
 
+function makeCardFrame(): HTMLElement {
+  const frame = document.createElement("div");
+  frame.className = "card-frame";
+  frame.setAttribute("aria-hidden", "true");
+  frame.innerHTML = `
+    <svg class="card-frame-svg" viewBox="0 0 200 300" fill="none" preserveAspectRatio="none">
+      <rect x="6" y="6" width="188" height="288" rx="8" stroke="currentColor" stroke-width="3.2" opacity="0.95"/>
+      <rect x="12" y="12" width="176" height="276" rx="6" stroke="currentColor" stroke-width="0.7" opacity="0.55"/>
+      <rect x="18" y="18" width="164" height="264" rx="4" stroke="currentColor" stroke-width="1.35" opacity="0.88"/>
+      <rect x="24" y="24" width="152" height="252" rx="2.5" stroke="currentColor" stroke-width="0.55" opacity="0.4"/>
+      <g stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+        <path d="M28 46 V34 H40"/>
+        <path d="M28 40 H36 V34"/>
+        <path d="M34 46 L40 40"/>
+        <path d="M172 46 V34 H160"/>
+        <path d="M172 40 H164 V34"/>
+        <path d="M166 46 L160 40"/>
+        <path d="M28 254 V266 H40"/>
+        <path d="M28 260 H36 V266"/>
+        <path d="M34 254 L40 260"/>
+        <path d="M172 254 V266 H160"/>
+        <path d="M172 260 H164 V266"/>
+        <path d="M166 254 L160 260"/>
+      </g>
+      <g stroke="currentColor" stroke-width="1" opacity="0.55">
+        <path d="M18 150 H24"/>
+        <path d="M182 150 H176"/>
+        <path d="M100 18 V24"/>
+      </g>
+      <g transform="translate(100 268)" stroke="currentColor" fill="none">
+        <circle r="9.5" stroke-width="1.4" opacity="0.95"/>
+        <circle r="6.2" stroke-width="0.7" opacity="0.65"/>
+        <path d="M0-5.2 L1.2-1.5 H5 L2 0.8 L3.1 4.5 L0 2.4 L-3.1 4.5 L-2 0.8 L-5-1.5 H-1.2 Z" stroke-width="0.85" opacity="0.9"/>
+      </g>
+    </svg>
+  `;
+  return frame;
+}
+
+/** Rider-Waite style face: cream mat, framed art, centered caption strip below. */
+function buildFavoriteFace(
+  kind: "front" | "back",
+  artContent: HTMLElement,
+  titleEl: HTMLElement | null,
+  badgeEl: HTMLElement | null,
+): HTMLElement {
+  const face = document.createElement("div");
+  face.className = `card-face card-${kind}`;
+
+  const mat = document.createElement("div");
+  mat.className = "card-mat";
+
+  const art = document.createElement("div");
+  art.className = "card-art";
+  art.appendChild(artContent);
+  art.appendChild(makeCardFrame());
+  if (badgeEl) art.appendChild(badgeEl);
+  mat.appendChild(art);
+
+  if (titleEl) {
+    titleEl.classList.add("card-caption");
+    mat.appendChild(titleEl);
+  } else {
+    const spacer = document.createElement("div");
+    spacer.className = "card-caption card-caption-spacer";
+    spacer.setAttribute("aria-hidden", "true");
+    mat.appendChild(spacer);
+  }
+
+  face.appendChild(mat);
+  return face;
+}
+
 function fillCover(coverWrap: HTMLElement, game: GameEntry) {
   const coverHost = document.createElement("div");
   coverHost.className = "game-cover placeholder";
@@ -646,18 +719,17 @@ function renderGrid() {
     fillCover(coverWrap, game);
 
     if (favorites) {
+      const titleEl = coverWrap.querySelector<HTMLElement>(".game-title");
+      const badgeEl = coverWrap.querySelector<HTMLElement>(".fav-badge");
+      titleEl?.remove();
+      badgeEl?.remove();
+
       const stage = document.createElement("div");
       stage.className = "card-stage";
       const flipper = document.createElement("div");
       flipper.className = "card-flipper";
-      const front = document.createElement("div");
-      front.className = "card-face card-front";
-      front.appendChild(coverWrap);
-      const back = document.createElement("div");
-      back.className = "card-face card-back";
-      back.appendChild(makeTarotBack());
-      flipper.appendChild(front);
-      flipper.appendChild(back);
+      flipper.appendChild(buildFavoriteFace("front", coverWrap, titleEl, badgeEl));
+      flipper.appendChild(buildFavoriteFace("back", makeTarotBack(), null, null));
       stage.appendChild(flipper);
       tile.appendChild(stage);
     } else {
