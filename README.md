@@ -87,4 +87,4 @@ Example theme: [`themes/example.css`](themes/example.css) — copy into the app 
 - **Tauri 2** Rust backend: folder watcher, launch, config, SteamGridDB, startup toggle, tray
 - **Vite + TypeScript** frontend: adaptive grid UI
 
-App data lives under `%APPDATA%\ally-launcher\` (`config.json`, `cache/covers/`, `themes/`).
+App data lives under `%APPDATA%\ally-launcher\` (`config.json`, `covers/`, `themes/`). Config writes are atomic and a `config.json.bak` is kept so favorites and cover mappings survive interrupted saves.

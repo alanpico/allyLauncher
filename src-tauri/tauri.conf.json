@@ -30,7 +30,7 @@
         "scope": {
           "allow": [
             "$APPDATA/ally-launcher/**/*",
-            "$APPDATA/ally-launcher/cache/covers/**/*"
+            "$APPDATA/ally-launcher/covers/**/*"
           ]
         }
       }
