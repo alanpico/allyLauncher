@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 const APP_DIR_NAME: &str = "ally-launcher";
 const RECENT_LIMIT: usize = 30;
+pub const BRAND_NAME_MAX: usize = 12;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -12,12 +13,29 @@ pub struct AppConfig {
     pub steam_grid_db_api_key: String,
     pub launch_on_startup: bool,
     pub theme: String,
+    #[serde(default = "default_brand_name")]
+    pub brand_name: String,
     #[serde(default)]
     pub favorites: Vec<String>,
     #[serde(default)]
     pub recent: Vec<String>,
     #[serde(default)]
     pub cover_map: std::collections::HashMap<String, String>,
+}
+
+fn default_brand_name() -> String {
+    "Alan".into()
+}
+
+/// Trim, cap at 12 chars, fall back to "Alan" if empty.
+pub fn sanitize_brand_name(raw: &str) -> String {
+    let limited: String = raw.trim().chars().take(BRAND_NAME_MAX).collect();
+    let limited = limited.trim().to_string();
+    if limited.is_empty() {
+        default_brand_name()
+    } else {
+        limited
+    }
 }
 
 impl Default for AppConfig {
@@ -27,6 +45,7 @@ impl Default for AppConfig {
             steam_grid_db_api_key: String::new(),
             launch_on_startup: false,
             theme: "default".into(),
+            brand_name: default_brand_name(),
             favorites: Vec::new(),
             recent: Vec::new(),
             cover_map: std::collections::HashMap::new(),
@@ -86,6 +105,7 @@ fn try_load_config(path: &Path) -> Option<AppConfig> {
     if cfg.games_folder.trim().is_empty() {
         cfg.games_folder = default_games_folder().to_string_lossy().to_string();
     }
+    cfg.brand_name = sanitize_brand_name(&cfg.brand_name);
     Some(cfg)
 }
 

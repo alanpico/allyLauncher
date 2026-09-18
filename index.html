@@ -10,7 +10,9 @@
   <body>
     <div id="app" class="app-shell">
       <header class="top-bar">
-        <div class="brand">Alan Games Launcher</div>
+        <div class="brand" aria-label="Brand">
+          <span id="brand-name">Alan</span>
+        </div>
         <nav id="category-bar" class="category-bar" aria-label="Categories"></nav>
         <div class="top-actions">
           <button type="button" id="btn-open-folder" class="icon-btn icon-btn-tool" title="Open games folder" aria-label="Open games folder">
@@ -52,6 +54,11 @@
         <label class="field">
           <span>Games folder</span>
           <input id="settings-games-folder" type="text" autocomplete="off" />
+        </label>
+
+        <label class="field">
+          <span>Display name</span>
+          <input id="settings-brand-name" type="text" maxlength="12" autocomplete="off" placeholder="Alan" />
         </label>
 
         <label class="field checkbox-field">

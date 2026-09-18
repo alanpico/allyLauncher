@@ -3,6 +3,7 @@
   "steamGridDbApiKey": "YOUR_STEAMGRIDDB_API_KEY",
   "launchOnStartup": false,
   "theme": "default",
+  "brandName": "Alan",
   "favorites": [],
   "recent": [],
   "coverMap": {}

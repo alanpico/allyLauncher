@@ -5,7 +5,8 @@ mod library;
 mod startup;
 
 use config::{
-    ensure_dirs, load_config, save_config, themes_dir, toggle_favorite, AppConfig,
+    ensure_dirs, load_config, sanitize_brand_name, save_config, themes_dir, toggle_favorite,
+    AppConfig,
 };
 use library::{list_folders, scan_games, GameEntry};
 use notify_debouncer_mini::{new_debouncer, DebounceEventResult};
@@ -36,6 +37,7 @@ pub struct LibrarySnapshot {
     pub launch_on_startup: bool,
     pub theme: String,
     pub themes: Vec<String>,
+    pub brand_name: String,
     pub has_api_key: bool,
 }
 
@@ -46,6 +48,7 @@ pub struct SettingsView {
     pub launch_on_startup: bool,
     pub theme: String,
     pub themes: Vec<String>,
+    pub brand_name: String,
     pub has_api_key: bool,
     pub steam_grid_db_api_key_set: bool,
 }
@@ -83,6 +86,7 @@ fn snapshot_from(config: &AppConfig, games: &[GameEntry]) -> LibrarySnapshot {
         launch_on_startup: config.launch_on_startup,
         theme: config.theme.clone(),
         themes: list_theme_names(),
+        brand_name: config.brand_name.clone(),
         has_api_key: !config.steam_grid_db_api_key.trim().is_empty(),
     }
 }
@@ -160,6 +164,7 @@ fn get_settings(state: State<'_, AppState>) -> Result<SettingsView, String> {
         launch_on_startup: startup::is_launch_on_startup(),
         theme: config.theme.clone(),
         themes: list_theme_names(),
+        brand_name: config.brand_name.clone(),
         has_api_key: !config.steam_grid_db_api_key.trim().is_empty(),
         steam_grid_db_api_key_set: !config.steam_grid_db_api_key.trim().is_empty(),
     })
@@ -172,6 +177,7 @@ fn update_settings(
     games_folder: Option<String>,
     launch_on_startup: Option<bool>,
     theme: Option<String>,
+    brand_name: Option<String>,
     steam_grid_db_api_key: Option<String>,
 ) -> Result<SettingsView, String> {
     {
@@ -183,6 +189,9 @@ fn update_settings(
         }
         if let Some(theme_name) = theme {
             config.theme = theme_name;
+        }
+        if let Some(name) = brand_name {
+            config.brand_name = sanitize_brand_name(&name);
         }
         if let Some(key) = steam_grid_db_api_key {
             config.steam_grid_db_api_key = key.trim().to_string();

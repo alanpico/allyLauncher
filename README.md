@@ -75,7 +75,7 @@ Favorites always uses the tarot table-spread layout (arc, felt wash, fate thread
 
 Themes can override CSS variables and classes:
 
-- Variables: `--bg`, `--bg-glow`, `--bg-elevated`, `--text`, `--text-muted`, `--accent`, `--accent-soft`, `--tile-gap`, `--tile-radius`, `--title-size`, `--bar-height`, `--focus-ring`, `--touch-min`, `--font`, `--scrollbar-thumb`, `--fav-thread`, `--fav-thread-gold`
+- Variables: `--bg`, `--bg-glow`, `--bg-elevated`, `--text`, `--text-muted`, `--accent`, `--accent-soft`, `--tile-gap`, `--tile-radius`, `--title-size`, `--bar-height`, `--focus-ring`, `--touch-min`, `--font`, `--brand-font`, `--scrollbar-thumb`, `--fav-thread`, `--fav-thread-gold`
 - Classes: `.app-shell`, `.top-bar`, `.brand`, `.category-bar`, `.category-tab`, `.game-grid`, `.game-tile`, `.game-cover`, `.game-title`, `.fav-badge`, `.settings-dialog`, `.icon-btn`, `.icon-btn-tool`, `.primary-btn`, `.controls-hint`
 - Layout hooks: `[data-layout="default"|"ornate-grid"|"hero-deck"]`, `.hero-deck`, `.hero-stage`, `.hero-card`, `.deck-wall`, `.card-hand`
 - Favorites-only: `[data-category="favorites"]` on `.app-shell` / `.game-grid`, `.fav-carousel`, `.card-stage`, `.card-flipper`, `.tarot-back`, `.fate-span`, `.fate-string`, `.fate-bead`, `.empty-favorites`

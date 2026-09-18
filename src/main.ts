@@ -20,6 +20,7 @@ type LibrarySnapshot = {
   launchOnStartup: boolean;
   theme: string;
   themes: string[];
+  brandName: string;
   hasApiKey: boolean;
 };
 
@@ -28,6 +29,7 @@ type SettingsView = {
   launchOnStartup: boolean;
   theme: string;
   themes: string[];
+  brandName: string;
   hasApiKey: boolean;
   steamGridDbApiKeySet: boolean;
 };
@@ -53,9 +55,24 @@ const THEME_LABELS: Record<string, string> = {
 
 const gridEl = () => document.querySelector<HTMLElement>("#game-grid")!;
 const shellEl = () => document.querySelector<HTMLElement>("#app")!;
+const brandEl = () => document.querySelector<HTMLElement>("#brand-name")!;
 const categoryBarEl = () => document.querySelector<HTMLElement>("#category-bar")!;
 const emptyEl = () => document.querySelector<HTMLElement>("#empty-state")!;
 const settingsDialog = () => document.querySelector<HTMLDialogElement>("#settings-dialog")!;
+
+const BRAND_NAME_MAX = 12;
+const DEFAULT_BRAND_NAME = "Alan";
+
+function sanitizeBrandName(raw: string): string {
+  const limited = [...raw.trim()].slice(0, BRAND_NAME_MAX).join("").trim();
+  return limited || DEFAULT_BRAND_NAME;
+}
+
+function applyBrandName(name: string) {
+  const brand = sanitizeBrandName(name);
+  brandEl().textContent = brand;
+  brandEl().closest(".brand")?.setAttribute("aria-label", brand);
+}
 const themeStyleEl = document.createElement("style");
 themeStyleEl.id = "theme-overrides";
 document.head.appendChild(themeStyleEl);
@@ -637,10 +654,11 @@ function createGameTile(game: GameEntry, index: number): HTMLElement {
   return tile;
 }
 
-function createDeckWallCard(game: GameEntry): HTMLElement {
+function createDeckWallCard(game: GameEntry, index: number): HTMLElement {
   const card = document.createElement("div");
   card.className = "deck-wall-card";
   card.dataset.path = game.path;
+  card.style.setProperty("--i", String(index % 7));
   const coverWrap = document.createElement("div");
   coverWrap.className = "game-cover-wrap";
   fillCover(coverWrap, game);
@@ -648,13 +666,25 @@ function createDeckWallCard(game: GameEntry): HTMLElement {
   return card;
 }
 
+/** Repeat library covers so a short list still fills the atmospheric wall. */
+function deckWallLoop(games: GameEntry[], targetCount = 216): GameEntry[] {
+  if (!games.length) return [];
+  const out: GameEntry[] = [];
+  let i = 0;
+  while (out.length < Math.max(targetCount, games.length)) {
+    out.push(games[i % games.length]);
+    i += 1;
+  }
+  return out;
+}
+
 function renderHeroDeck(grid: HTMLElement) {
   const deckWall = document.createElement("div");
   deckWall.className = "deck-wall";
   deckWall.setAttribute("aria-hidden", "true");
-  for (const game of visibleGames) {
-    deckWall.appendChild(createDeckWallCard(game));
-  }
+  deckWallLoop(visibleGames).forEach((game, index) => {
+    deckWall.appendChild(createDeckWallCard(game, index));
+  });
 
   const heroStage = document.createElement("div");
   heroStage.className = "hero-stage";
@@ -759,6 +789,7 @@ function renderGrid() {
 }
 
 function render() {
+  if (snapshot) applyBrandName(snapshot.brandName);
   syncFavoritesMode();
   renderCategories();
   renderGrid();
@@ -830,11 +861,13 @@ async function loadLibrary() {
 async function openSettings() {
   const settings = await invoke<SettingsView>("get_settings");
   const folderInput = document.querySelector<HTMLInputElement>("#settings-games-folder")!;
+  const brandInput = document.querySelector<HTMLInputElement>("#settings-brand-name")!;
   const startupInput = document.querySelector<HTMLInputElement>("#settings-startup")!;
   const apiInput = document.querySelector<HTMLInputElement>("#settings-api-key")!;
   const themeSelect = document.querySelector<HTMLSelectElement>("#settings-theme")!;
 
   folderInput.value = settings.gamesFolder;
+  brandInput.value = settings.brandName;
   startupInput.checked = settings.launchOnStartup;
   apiInput.value = "";
   apiInput.placeholder = settings.steamGridDbApiKeySet
@@ -856,12 +889,14 @@ async function openSettings() {
 async function saveSettings(submitter: string) {
   if (submitter !== "save") return;
   const folderInput = document.querySelector<HTMLInputElement>("#settings-games-folder")!;
+  const brandInput = document.querySelector<HTMLInputElement>("#settings-brand-name")!;
   const startupInput = document.querySelector<HTMLInputElement>("#settings-startup")!;
   const apiInput = document.querySelector<HTMLInputElement>("#settings-api-key")!;
   const themeSelect = document.querySelector<HTMLSelectElement>("#settings-theme")!;
 
   const payload: Record<string, unknown> = {
     gamesFolder: folderInput.value.trim(),
+    brandName: sanitizeBrandName(brandInput.value),
     launchOnStartup: startupInput.checked,
     theme: themeSelect.value,
   };

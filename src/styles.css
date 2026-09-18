@@ -15,6 +15,8 @@
   --focus-ring: 0 0 0 3px var(--accent);
   --touch-min: 48px;
   --font: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --brand-font: "Perpetua Titling MT", "Copperplate Gothic Light", "Tw Cen MT", "Century Gothic",
+    "Bahnschrift", "Segoe UI Variable Display", sans-serif;
   --scrollbar-thumb: #6b7380;
   --fav-thread: #c45c4a;
   --fav-thread-gold: #e0c070;
@@ -48,30 +50,97 @@ body {
 
 .top-bar {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: minmax(6rem, 1fr) auto minmax(6rem, 1fr);
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.35rem 0.9rem;
-  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(10px);
+  gap: 0.85rem;
+  padding: 0.65rem clamp(1.15rem, 2.4vw, 1.75rem);
+  background: transparent;
+  border-bottom: none;
   z-index: 4;
+  pointer-events: none;
+}
+
+.top-bar > * {
+  pointer-events: auto;
 }
 
 .brand {
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  font-size: clamp(0.95rem, 1.5vw, 1.2rem);
+  justify-self: start;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.35rem;
+  max-width: min(100%, 22rem);
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--fav-thread-gold) 28%, rgba(255, 255, 255, 0.1));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 55%),
+    color-mix(in srgb, var(--bg-elevated) 52%, rgba(12, 16, 22, 0.78));
+  backdrop-filter: blur(16px) saturate(1.15);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.brand::before,
+.brand::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 0.34rem;
+  height: 0.34rem;
+  rotate: 45deg;
+  border: 1px solid color-mix(in srgb, var(--fav-thread-gold) 72%, transparent);
+  background: color-mix(in srgb, var(--fav-thread-gold) 38%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--fav-thread-gold) 28%, transparent);
+}
+
+#brand-name {
+  --brand-tracking: 0.42em;
+  display: block;
+  flex: 0 1 auto;
+  min-width: 0;
   white-space: nowrap;
+  font-family: var(--brand-font);
+  font-weight: 500;
+  font-size: clamp(0.82rem, 1.35vw, 1.02rem);
+  letter-spacing: var(--brand-tracking);
+  /* Cancel trailing letter-spacing so end diamond matches start gap */
+  margin-right: calc(var(--brand-tracking) * -1);
+  text-transform: uppercase;
+  line-height: 1;
+  color: #e8eef6;
+  background: linear-gradient(
+    185deg,
+    #f7f9fc 8%,
+    #d5deea 48%,
+    #a7b7cb 76%,
+    color-mix(in srgb, var(--fav-thread-gold) 75%, #cbb07a) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
 }
 
 .category-bar {
+  justify-self: center;
   display: flex;
-  gap: 0.4rem;
+  gap: 0.15rem;
   overflow-x: auto;
   scrollbar-width: none;
-  min-height: 2.15rem;
+  min-height: 2.35rem;
   align-items: center;
+  padding: 0.22rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-elevated) 55%, rgba(12, 16, 22, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px) saturate(1.15);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .category-bar::-webkit-scrollbar {
@@ -83,19 +152,24 @@ body {
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
-  min-height: 2.15rem;
-  padding: 0 0.75rem;
+  min-height: 1.95rem;
+  padding: 0 0.95rem;
   border-radius: 999px;
   font: inherit;
   font-size: 0.88rem;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .category-tab.active {
   color: var(--text);
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 38%, rgba(20, 28, 40, 0.55));
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .category-tab:focus-visible {
@@ -104,20 +178,25 @@ body {
 }
 
 .top-actions {
+  justify-self: end;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.4rem;
 }
 
 .icon-btn-tool {
-  min-height: 2rem;
-  min-width: 2rem;
-  width: 2rem;
-  height: 2rem;
+  min-height: 2.35rem;
+  min-width: 2.35rem;
+  width: 2.35rem;
+  height: 2.35rem;
   padding: 0;
   display: grid;
   place-items: center;
-  border-radius: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-elevated) 50%, rgba(12, 16, 22, 0.65));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
 }
 
 .icon-btn-tool svg {
@@ -831,7 +910,7 @@ body {
 .game-grid.hero-deck {
   position: relative;
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   grid-template-columns: 1fr;
   gap: 0;
   overflow: hidden;
@@ -841,21 +920,27 @@ body {
 
 .hero-deck .deck-wall {
   position: absolute;
-  inset: 0 0 28% 0;
+  /* Full stage — including behind the hand strip */
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 0.45rem;
-  padding: clamp(0.75rem, 2vw, 1.4rem);
-  padding-bottom: 18%;
+  /* Fixed equal columns so tracks always span edge-to-edge (no right gutter) */
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0.4rem 0 clamp(3.8rem, 9vh, 5.4rem);
   align-content: start;
-  opacity: 0.34;
+  justify-content: stretch;
+  opacity: 0.32;
   filter: saturate(0.55) brightness(0.7);
   pointer-events: none;
   mask-image: linear-gradient(
     180deg,
     #000 0%,
-    #000 45%,
-    transparent 92%
+    #000 78%,
+    rgba(0, 0, 0, 0.55) 90%,
+    rgba(0, 0, 0, 0.2) 97%,
+    transparent 100%
   );
   z-index: 0;
 }
@@ -890,14 +975,17 @@ body {
   position: relative;
   z-index: 2;
   display: grid;
-  place-items: center;
+  place-items: end center;
+  align-content: end;
+  justify-items: center;
   min-height: 0;
-  padding: clamp(0.6rem, 2vh, 1.2rem) 1rem 0.35rem;
+  padding: clamp(0.4rem, 1.5vh, 1rem) 1rem clamp(0.85rem, 2.4vh, 1.6rem);
   cursor: pointer;
 }
 
 .hero-deck .hero-card {
-  width: min(42vw, calc(58vh * 2 / 3), 320px);
+  width: min(54vw, calc(72vh * 2 / 3), 440px);
+  max-height: 100%;
   aspect-ratio: 2 / 3;
   transform: rotate(var(--tilt, 0deg));
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
@@ -935,6 +1023,7 @@ body {
 }
 
 .hero-deck .card-hand {
+  --hand-tile-w: clamp(64px, 8.5vw, 100px);
   position: relative;
   z-index: 3;
   display: flex;
@@ -944,17 +1033,20 @@ body {
   gap: 0.65rem;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0.5rem clamp(1rem, 4vw, 2.5rem) clamp(3.4rem, 8vh, 4.9rem);
-  padding-left: calc(50% - 3.1rem);
-  padding-right: calc(50% - 3.1rem);
+  box-sizing: border-box;
+  /* Extra top pad so focus scale/lift/ring can rise over the wall without clipping */
+  padding: 2.4rem clamp(1rem, 4vw, 2.5rem) clamp(3.6rem, 8.5vh, 5.1rem);
+  padding-left: calc(50% - calc(var(--hand-tile-w) * 0.56));
+  padding-right: calc(50% - calc(var(--hand-tile-w) * 0.56));
+  min-height: calc(var(--hand-tile-w) * 3 / 2 + 6.2rem);
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
   touch-action: pan-x;
   background: linear-gradient(
     180deg,
     transparent 0%,
-    color-mix(in srgb, var(--bg) 55%, transparent) 28%,
-    color-mix(in srgb, var(--bg-elevated) 70%, transparent) 100%
+    color-mix(in srgb, var(--bg) 22%, transparent) 42%,
+    color-mix(in srgb, var(--bg-elevated) 38%, transparent) 100%
   );
 }
 
@@ -964,8 +1056,9 @@ body {
 
 .hero-deck .card-hand .game-tile {
   flex: 0 0 auto;
-  width: clamp(64px, 8.5vw, 100px);
+  width: var(--hand-tile-w);
   min-height: 0;
+  height: auto;
   opacity: 0.72;
   filter: saturate(0.8);
   transition:
@@ -976,17 +1069,18 @@ body {
 .hero-deck .card-hand .game-tile.focused {
   opacity: 1;
   filter: none;
-  z-index: 3;
+  z-index: 6;
 }
 
 .hero-deck .card-hand .game-cover-wrap {
   --card-scale: 1;
   --card-lift: 0px;
+  transform-origin: 50% 100%;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4);
 }
 
 .hero-deck .card-hand .game-tile.focused .game-cover-wrap {
-  --card-lift: -0.35rem;
+  --card-lift: -0.55rem;
   --card-scale: 1.12;
   box-shadow:
     var(--focus-ring),
@@ -1023,7 +1117,7 @@ body {
   }
 
   .hero-deck .deck-wall {
-    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    grid-template-columns: repeat(18, minmax(0, 1fr));
   }
 }
 
@@ -1031,10 +1125,15 @@ body {
   .top-bar {
     grid-template-columns: 1fr auto;
     grid-template-rows: auto auto;
+    gap: 0.55rem;
   }
 
   .brand {
     grid-column: 1;
+  }
+
+  #brand-name {
+    --brand-tracking: 0.32em;
   }
 
   .top-actions {
@@ -1051,6 +1150,6 @@ body {
   }
 
   .hero-deck .hero-card {
-    width: min(56vw, calc(48vh * 2 / 3), 260px);
+    width: min(62vw, calc(58vh * 2 / 3), 340px);
   }
 }
