@@ -80,6 +80,11 @@ fn legacy_covers_dir() -> PathBuf {
     app_data_dir().join("cache").join("covers")
 }
 
+/// Cached PNGs of shortcut-associated icons (used for no-art placeholders).
+pub fn icons_dir() -> PathBuf {
+    app_data_dir().join("icons")
+}
+
 pub fn themes_dir() -> PathBuf {
     app_data_dir().join("themes")
 }
@@ -94,6 +99,7 @@ pub fn default_games_folder() -> PathBuf {
 pub fn ensure_dirs(config: &AppConfig) -> Result<(), String> {
     fs::create_dir_all(app_data_dir()).map_err(|e| e.to_string())?;
     fs::create_dir_all(covers_dir()).map_err(|e| e.to_string())?;
+    fs::create_dir_all(icons_dir()).map_err(|e| e.to_string())?;
     fs::create_dir_all(themes_dir()).map_err(|e| e.to_string())?;
     fs::create_dir_all(&config.games_folder).map_err(|e| e.to_string())?;
     Ok(())

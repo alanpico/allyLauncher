@@ -11,6 +11,7 @@ pub struct GameEntry {
     pub folder: String,
     pub extension: String,
     pub cover_path: Option<String>,
+    pub icon_path: Option<String>,
     pub favorite: bool,
 }
 
@@ -51,6 +52,7 @@ pub fn scan_games(
         let folder = relative_folder(root, path);
         let path_str = path.to_string_lossy().to_string();
         let cover_path = cover_map.get(&path_str).cloned().filter(|p| Path::new(p).exists());
+        let icon_path = crate::icon::cached_icon(path).map(|p| p.to_string_lossy().to_string());
 
         games.push(GameEntry {
             id: path_str.clone(),
@@ -59,6 +61,7 @@ pub fn scan_games(
             folder,
             extension: ext,
             cover_path,
+            icon_path,
             favorite: favorites.iter().any(|f| f == &path_str),
         });
     }

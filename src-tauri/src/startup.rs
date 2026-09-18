@@ -54,7 +54,7 @@ fn create_startup_shortcut(shortcut: &PathBuf, exe_path: &str) -> Result<(), Str
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
 
-    // Use PowerShell to create a .lnk without extra crates.
+    // Use PowerShell to create a .lnk without extra crates — hidden window.
     let ps = format!(
         "$ws = New-Object -ComObject WScript.Shell; \
          $s = $ws.CreateShortcut('{}'); \
@@ -72,17 +72,7 @@ fn create_startup_shortcut(shortcut: &PathBuf, exe_path: &str) -> Result<(), Str
         )
     );
 
-    let output = std::process::Command::new("powershell")
-        .args(["-NoProfile", "-Command", &ps])
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    if !output.status.success() {
-        return Err(format!(
-            "Failed to create startup shortcut: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
+    run_powershell_hidden(&ps)?;
     Ok(())
 }
 
@@ -103,14 +93,34 @@ fn set_run_key(enabled: bool, exe_path: &str) -> Result<(), String> {
         )
     };
 
-    let output = std::process::Command::new("powershell")
-        .args(["-NoProfile", "-Command", &ps])
+    run_powershell_hidden(&ps)
+}
+
+#[cfg(target_os = "windows")]
+fn run_powershell_hidden(script: &str) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    use std::process::Command;
+
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+    let output = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-WindowStyle",
+            "Hidden",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            script,
+        ])
+        .creation_flags(CREATE_NO_WINDOW)
         .output()
         .map_err(|e| e.to_string())?;
 
     if !output.status.success() {
         return Err(format!(
-            "Failed to update Run key: {}",
+            "PowerShell failed: {}",
             String::from_utf8_lossy(&output.stderr)
         ));
     }

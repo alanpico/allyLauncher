@@ -1,5 +1,6 @@
 mod config;
 mod cover;
+mod icon;
 mod launch;
 mod library;
 mod startup;
@@ -197,12 +198,16 @@ fn update_settings(
             config.steam_grid_db_api_key = key.trim().to_string();
         }
         if let Some(enabled) = launch_on_startup {
-            let exe = std::env::current_exe()
-                .map_err(|e| e.to_string())?
-                .to_string_lossy()
-                .to_string();
-            startup::set_launch_on_startup(enabled, &exe)?;
-            config.launch_on_startup = enabled;
+            // Only touch startup registration when the value actually changes —
+            // otherwise saving brand/theme alone would flash PowerShell windows.
+            if enabled != config.launch_on_startup {
+                let exe = std::env::current_exe()
+                    .map_err(|e| e.to_string())?
+                    .to_string_lossy()
+                    .to_string();
+                startup::set_launch_on_startup(enabled, &exe)?;
+                config.launch_on_startup = enabled;
+            }
         }
         ensure_dirs(&config)?;
         save_config(&config)?;
@@ -287,6 +292,65 @@ fn get_cover_data_url(path: String) -> Result<String, String> {
         mime,
         base64::engine::general_purpose::STANDARD.encode(bytes)
     ))
+}
+
+#[tauri::command]
+fn get_icon_data_url(path: String) -> Result<String, String> {
+    // Only serve icons that were already generated (settings action) — never extract here.
+    let icon_root = config::icons_dir()
+        .canonicalize()
+        .unwrap_or_else(|_| config::icons_dir());
+    let requested = PathBuf::from(&path);
+    let canon = requested
+        .canonicalize()
+        .map_err(|_| "Icon not found".to_string())?;
+    if !canon.starts_with(&icon_root) {
+        return Err("Icon path not allowed".into());
+    }
+    let bytes = std::fs::read(&canon).map_err(|e| e.to_string())?;
+    use base64::Engine;
+    Ok(format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(bytes)
+    ))
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlaceholderGenerateResult {
+    generated: u32,
+    failed: u32,
+    snapshot: LibrarySnapshot,
+}
+
+#[tauri::command]
+fn generate_placeholder_cards(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<PlaceholderGenerateResult, String> {
+    let games = state.games.lock().clone();
+    let mut generated = 0u32;
+    let mut failed = 0u32;
+
+    icon::clear_failure_cache();
+    for game in &games {
+        if game.cover_path.is_some() {
+            continue;
+        }
+        let path = PathBuf::from(&game.path);
+        match icon::ensure_icon(&path) {
+            Ok(_) => generated += 1,
+            Err(_) => failed += 1,
+        }
+    }
+
+    let snap = refresh_library(&state)?;
+    emit_library(&app, &snap);
+    Ok(PlaceholderGenerateResult {
+        generated,
+        failed,
+        snapshot: snap,
+    })
 }
 
 #[tauri::command]
@@ -442,6 +506,8 @@ pub fn run() {
             open_games_folder,
             open_themes_folder,
             get_cover_data_url,
+            get_icon_data_url,
+            generate_placeholder_cards,
             show_window,
             hide_window
         ])

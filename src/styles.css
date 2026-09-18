@@ -359,12 +359,65 @@ body {
 }
 
 .game-cover.placeholder {
+  --tile-main: #1a2230;
+  --tile-accent: #9bb4d0;
+  position: relative;
   display: grid;
   place-items: center;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  overflow: hidden;
+  color: var(--tile-accent);
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 48%, color-mix(in srgb, var(--tile-accent) 18%, transparent) 0%, transparent 68%),
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--tile-main) 78%, #2a3448) 0%,
+      var(--tile-main) 46%,
+      color-mix(in srgb, var(--tile-main) 70%, #05070c) 100%
+    );
+}
+
+.summoning-circle {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  color: var(--tile-accent);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tile-accent) 35%, transparent));
+  opacity: 0.95;
+}
+
+.summoning-icon {
+  position: relative;
+  z-index: 1;
+  width: clamp(2.4rem, 38%, 4.25rem);
+  height: clamp(2.4rem, 38%, 4.25rem);
+  object-fit: contain;
+  image-rendering: auto;
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+
+.summoning-icon.is-ready {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.game-cover.placeholder.no-icon .summoning-icon {
+  display: none;
+}
+
+.fav-carousel .game-cover.placeholder {
+  border-radius: 0.22rem;
+}
+
+.fav-carousel .summoning-circle {
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--tile-accent) 28%, transparent));
 }
 
 .fav-badge {

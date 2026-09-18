@@ -8,6 +8,7 @@ type GameEntry = {
   folder: string;
   extension: string;
   coverPath: string | null;
+  iconPath: string | null;
   favorite: boolean;
 };
 
@@ -136,6 +137,8 @@ function filteredGames(): GameEntry[] {
 }
 
 const coverCache = new Map<string, string>();
+const iconCache = new Map<string, string | null>();
+const iconInflight = new Map<string, Promise<string | null>>();
 
 type AmbientPalette = {
   bg: string;
@@ -143,7 +146,13 @@ type AmbientPalette = {
   thumb: string;
 };
 
+type TileColors = {
+  main: string;
+  accent: string;
+};
+
 const ambientCache = new Map<string, AmbientPalette>();
+const tileColorCache = new Map<string, TileColors>();
 let ambientGen = 0;
 
 function clamp(n: number, min: number, max: number): number {
@@ -181,6 +190,33 @@ function paletteFromRgb(r: number, g: number, b: number): AmbientPalette {
   };
 }
 
+/** Stable pleasant jewel-tone pair per shortcut path. */
+function colorsFromPath(path: string): TileColors {
+  let h = 2166136261;
+  for (let i = 0; i < path.length; i++) {
+    h ^= path.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  // Curated hues that read well on dark cards (avoid neon / muddy yellows).
+  const mains = [0.58, 0.72, 0.82, 0.92, 0.02, 0.08, 0.14, 0.33, 0.45, 0.52];
+  const hue = mains[(h >>> 0) % mains.length];
+  const accentHue = (hue + 0.06 + (((h >>> 8) % 5) * 0.01)) % 1;
+  return {
+    main: hslToCss(hue, 0.36, 0.18),
+    accent: hslToCss(accentHue, 0.48, 0.62),
+  };
+}
+
+function tileColorsFromRgb(r: number, g: number, b: number): TileColors {
+  const [h, s] = rgbToHsl(r, g, b);
+  const mainS = clamp(s * 0.7, 0.22, 0.48);
+  const accentS = clamp(Math.max(s, 0.35) * 0.95, 0.4, 0.72);
+  return {
+    main: hslToCss(h, mainS, 0.18),
+    accent: hslToCss(h, accentS, 0.62),
+  };
+}
+
 function resetAmbient() {
   const root = document.documentElement;
   root.style.removeProperty("--bg");
@@ -202,6 +238,20 @@ function applyAmbient(palette: AmbientPalette) {
 }
 
 function sampleCoverPalette(dataUrl: string): Promise<AmbientPalette | null> {
+  return sampleDominantRgb(dataUrl).then((rgb) =>
+    rgb ? paletteFromRgb(rgb.r, rgb.g, rgb.b) : null,
+  );
+}
+
+function sampleTileColors(dataUrl: string): Promise<TileColors | null> {
+  return sampleDominantRgb(dataUrl).then((rgb) =>
+    rgb ? tileColorsFromRgb(rgb.r, rgb.g, rgb.b) : null,
+  );
+}
+
+type Rgb = { r: number; g: number; b: number };
+
+function sampleDominantRgb(dataUrl: string): Promise<Rgb | null> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -244,16 +294,35 @@ function sampleCoverPalette(dataUrl: string): Promise<AmbientPalette | null> {
           if (!best || bin.n > best.n) best = bin;
         }
         if (!best) {
-          resolve(null);
+          // Icons are often low-sat / high-contrast — fall back to any opaque mid-tone.
+          let fr = 0;
+          let fg = 0;
+          let fb = 0;
+          let n = 0;
+          for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] < 180) continue;
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const light = (Math.max(r, g, b) + Math.min(r, g, b)) / 2;
+            if (light < 20 || light > 235) continue;
+            fr += r;
+            fg += g;
+            fb += b;
+            n += 1;
+          }
+          if (!n) {
+            resolve(null);
+            return;
+          }
+          resolve({ r: Math.round(fr / n), g: Math.round(fg / n), b: Math.round(fb / n) });
           return;
         }
-        resolve(
-          paletteFromRgb(
-            Math.round(best.r / best.n),
-            Math.round(best.g / best.n),
-            Math.round(best.b / best.n),
-          ),
-        );
+        resolve({
+          r: Math.round(best.r / best.n),
+          g: Math.round(best.g / best.n),
+          b: Math.round(best.b / best.n),
+        });
       } catch {
         resolve(null);
       }
@@ -264,29 +333,160 @@ function sampleCoverPalette(dataUrl: string): Promise<AmbientPalette | null> {
 }
 
 async function syncAmbient(game: GameEntry | undefined, gen: number) {
-  if (!game?.coverPath) {
+  if (!game) {
     if (gen === ambientGen) resetAmbient();
     return;
   }
-  const cached = ambientCache.get(game.coverPath);
-  if (cached) {
-    if (gen === ambientGen) applyAmbient(cached);
+
+  if (game.coverPath) {
+    const cached = ambientCache.get(game.coverPath);
+    if (cached) {
+      if (gen === ambientGen) applyAmbient(cached);
+      return;
+    }
+    const url = await coverUrl(game.coverPath);
+    if (gen !== ambientGen) return;
+    if (!url) {
+      resetAmbient();
+      return;
+    }
+    const palette = await sampleCoverPalette(url);
+    if (gen !== ambientGen) return;
+    if (!palette) {
+      resetAmbient();
+      return;
+    }
+    ambientCache.set(game.coverPath, palette);
+    applyAmbient(palette);
     return;
   }
-  const url = await coverUrl(game.coverPath);
+
+  // No cover — ambient from icon colors when generated, else path jewel tone.
+  const colors = game.iconPath
+    ? await resolveTileColors(game)
+    : colorsFromPath(game.path);
   if (gen !== ambientGen) return;
-  if (!url) {
-    resetAmbient();
-    return;
+  applyAmbient({
+    bg: colors.main,
+    glow: `color-mix(in srgb, ${colors.accent} 42%, ${colors.main})`,
+    thumb: colors.accent,
+  });
+}
+
+async function iconUrl(iconPath: string | null): Promise<string | null> {
+  if (!iconPath) return null;
+  if (iconCache.has(iconPath)) return iconCache.get(iconPath) ?? null;
+  const pending = iconInflight.get(iconPath);
+  if (pending) return pending;
+
+  const request = (async () => {
+    try {
+      const dataUrl = await invoke<string>("get_icon_data_url", { path: iconPath });
+      iconCache.set(iconPath, dataUrl);
+      return dataUrl;
+    } catch {
+      iconCache.set(iconPath, null);
+      return null;
+    } finally {
+      iconInflight.delete(iconPath);
+    }
+  })();
+
+  iconInflight.set(iconPath, request);
+  return request;
+}
+
+async function resolveTileColors(game: GameEntry): Promise<TileColors> {
+  const cached = tileColorCache.get(game.path);
+  if (cached) return cached;
+
+  const url = await iconUrl(game.iconPath);
+  if (url) {
+    const sampled = await sampleTileColors(url);
+    if (sampled) {
+      tileColorCache.set(game.path, sampled);
+      return sampled;
+    }
   }
-  const palette = await sampleCoverPalette(url);
-  if (gen !== ambientGen) return;
-  if (!palette) {
-    resetAmbient();
-    return;
+  const fallback = colorsFromPath(game.path);
+  tileColorCache.set(game.path, fallback);
+  return fallback;
+}
+
+function makeSummoningCircle(): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "summoning-circle");
+  svg.setAttribute("viewBox", "0 0 200 300");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = `
+    <g class="summoning-ring" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="100" cy="150" r="72" stroke-width="1.15" opacity="0.5"/>
+      <circle cx="100" cy="150" r="64" stroke-width="0.7" stroke-dasharray="1.6 3.4" opacity="0.72"/>
+      <circle cx="100" cy="150" r="54" stroke-width="1.7" opacity="0.95"/>
+      <circle cx="100" cy="150" r="44" stroke-width="0.75" opacity="0.42"/>
+      <path d="M100 86 L124 110 L100 134 L76 110 Z" stroke-width="1" opacity="0.7"/>
+      <path d="M100 166 L124 190 L100 214 L76 190 Z" stroke-width="1" opacity="0.7"/>
+      <path d="M100 98 L114 150 L100 202 L86 150 Z" stroke-width="0.8" opacity="0.35"/>
+      <g stroke-width="1.05" opacity="0.88">
+        <path d="M100 78 V68"/>
+        <path d="M100 222 V232"/>
+        <path d="M46 150 H36"/>
+        <path d="M154 150 H164"/>
+        <path d="M58.5 108.5 L51 101"/>
+        <path d="M141.5 108.5 L149 101"/>
+        <path d="M58.5 191.5 L51 199"/>
+        <path d="M141.5 191.5 L149 199"/>
+      </g>
+      <g transform="translate(100 78)" opacity="0.9">
+        <circle r="5.2" stroke-width="1.1"/>
+        <path d="M0-3.2 L0.75-0.9 H3.1 L1.2 0.45 L1.85 2.8 L0 1.5 L-1.85 2.8 L-1.2 0.45 L-3.1-0.9 H-0.75 Z" stroke-width="0.7"/>
+      </g>
+    </g>
+  `;
+  return svg;
+}
+
+function applyTileColors(el: HTMLElement, colors: TileColors) {
+  el.style.setProperty("--tile-main", colors.main);
+  el.style.setProperty("--tile-accent", colors.accent);
+}
+
+function buildPlaceholderCover(game: GameEntry): HTMLElement {
+  const coverHost = document.createElement("div");
+  coverHost.className = "game-cover placeholder summoning";
+  applyTileColors(coverHost, colorsFromPath(game.path));
+  coverHost.appendChild(makeSummoningCircle());
+
+  // Icons only appear after Settings → Generate placeholders.
+  if (!game.iconPath) {
+    coverHost.classList.add("no-icon");
+    return coverHost;
   }
-  ambientCache.set(game.coverPath, palette);
-  applyAmbient(palette);
+
+  const icon = document.createElement("img");
+  icon.className = "summoning-icon";
+  icon.alt = "";
+  icon.draggable = false;
+  coverHost.appendChild(icon);
+
+  void (async () => {
+    const url = await iconUrl(game.iconPath);
+    if (!coverHost.isConnected) return;
+    if (url) {
+      icon.src = url;
+      icon.classList.add("is-ready");
+      const colors = await sampleTileColors(url);
+      if (!coverHost.isConnected) return;
+      if (colors) {
+        tileColorCache.set(game.path, colors);
+        applyTileColors(coverHost, colors);
+      }
+    } else {
+      coverHost.classList.add("no-icon");
+    }
+  })();
+
+  return coverHost;
 }
 
 /** Stable per-path idle/focus tilts so cards feel like a shuffled tarot deck. */
@@ -569,9 +769,7 @@ function buildFavoriteFace(
 }
 
 function fillCover(coverWrap: HTMLElement, game: GameEntry) {
-  const coverHost = document.createElement("div");
-  coverHost.className = "game-cover placeholder";
-  coverHost.textContent = "No art";
+  const coverHost = buildPlaceholderCover(game);
   coverWrap.appendChild(coverHost);
 
   if (game.coverPath) {
@@ -584,7 +782,9 @@ function fillCover(coverWrap: HTMLElement, game: GameEntry) {
       img.alt = "";
       img.loading = "lazy";
       img.onerror = () => {
-        if (coverHost.isConnected) coverHost.textContent = "No art";
+        if (!img.isConnected) return;
+        const again = buildPlaceholderCover(game);
+        img.replaceWith(again);
       };
       coverHost.replaceWith(img);
     });
@@ -1095,6 +1295,40 @@ window.addEventListener("DOMContentLoaded", async () => {
   document.querySelector("#btn-fetch-covers")?.addEventListener("click", async () => {
     snapshot = await invoke<LibrarySnapshot>("fetch_missing_covers");
     render();
+  });
+
+  document.querySelector("#btn-generate-placeholders")?.addEventListener("click", async () => {
+    const btn = document.querySelector<HTMLButtonElement>("#btn-generate-placeholders");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Generating…";
+    }
+    try {
+      const result = await invoke<{
+        generated: number;
+        failed: number;
+        snapshot: LibrarySnapshot;
+      }>("generate_placeholder_cards");
+      iconCache.clear();
+      iconInflight.clear();
+      tileColorCache.clear();
+      snapshot = result.snapshot;
+      render();
+      if (btn) {
+        const parts = [`${result.generated} ready`];
+        if (result.failed) parts.push(`${result.failed} failed`);
+        btn.textContent = parts.join(" · ");
+      }
+    } catch {
+      if (btn) btn.textContent = "Generate failed";
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        window.setTimeout(() => {
+          if (btn.isConnected) btn.textContent = "Generate placeholders";
+        }, 2200);
+      }
+    }
   });
 
   document.querySelector("#settings-form")?.addEventListener("submit", (e) => {

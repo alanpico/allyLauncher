@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::process::Command;
 
 pub fn launch_shortcut(path: &str) -> Result<(), String> {
     let p = Path::new(path);
@@ -9,12 +8,32 @@ pub fn launch_shortcut(path: &str) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        // `start` opens .lnk / .url with the associated handler.
-        let status = Command::new("cmd")
-            .args(["/C", "start", "", path])
-            .spawn()
-            .map_err(|e| e.to_string())?;
-        let _ = status;
+        use std::os::windows::ffi::OsStrExt;
+        use windows::core::PCWSTR;
+        use windows::Win32::UI::Shell::ShellExecuteW;
+        use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+        let wide: Vec<u16> = p
+            .as_os_str()
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+        let open: Vec<u16> = "open\0".encode_utf16().collect();
+
+        // ShellExecute opens .lnk / .url without spawning a visible console.
+        let result = unsafe {
+            ShellExecuteW(
+                None,
+                PCWSTR(open.as_ptr()),
+                PCWSTR(wide.as_ptr()),
+                None,
+                None,
+                SW_SHOWNORMAL,
+            )
+        };
+        if (result.0 as usize) <= 32 {
+            return Err(format!("Failed to launch shortcut (code {})", result.0 as usize));
+        }
         return Ok(());
     }
 
